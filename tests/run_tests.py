@@ -17,6 +17,7 @@ TEST_FILES = [
     "tests/unit/test_clean_outputs.py",
     "tests/unit/test_run_project.py",
     "tests/unit/test_classify_document.py",
+    "tests/unit/test_agent_simulator.py",
 ]
 
 
