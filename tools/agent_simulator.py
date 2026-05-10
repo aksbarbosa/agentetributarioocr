@@ -131,46 +131,84 @@ def print_json_response(response: dict) -> None:
     print(json.dumps(response, ensure_ascii=False, indent=2))
 
 
-def parse_args(argv: list[str]) -> tuple[str, bool]:
+def save_json_response(response: dict, output_path: str) -> None:
+    """
+    Salva a resposta estruturada em um arquivo JSON.
+    """
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(response, file, ensure_ascii=False, indent=2)
+
+
+def parse_args(argv: list[str]) -> tuple[str, bool, str | None]:
     """
     Uso:
         python3 tools/agent_simulator.py arquivo.txt
         python3 tools/agent_simulator.py arquivo.txt --json
+        python3 tools/agent_simulator.py arquivo.txt --save-json output.json
+        python3 tools/agent_simulator.py arquivo.txt --json --save-json output.json
     """
-    if len(argv) not in {2, 3}:
+    if len(argv) < 2:
         print("Uso:")
         print("python3 tools/agent_simulator.py caminho/do/texto.txt")
         print("python3 tools/agent_simulator.py caminho/do/texto.txt --json")
+        print("python3 tools/agent_simulator.py caminho/do/texto.txt --save-json output.json")
+        print("python3 tools/agent_simulator.py caminho/do/texto.txt --json --save-json output.json")
         sys.exit(1)
 
     input_path = argv[1]
     output_json = False
+    save_json_path = None
 
-    if len(argv) == 3:
-        if argv[2] != "--json":
-            print("Argumento inválido.")
-            print("Use --json para saída estruturada.")
-            sys.exit(1)
+    args = argv[2:]
+    index = 0
 
-        output_json = True
+    while index < len(args):
+        arg = args[index]
+
+        if arg == "--json":
+            output_json = True
+            index += 1
+            continue
+
+        if arg == "--save-json":
+            if index + 1 >= len(args):
+                print("Erro: --save-json exige um caminho de saída.")
+                sys.exit(1)
+
+            save_json_path = args[index + 1]
+            index += 2
+            continue
+
+        print(f"Argumento inválido: {arg}")
+        sys.exit(1)
 
     file_path = Path(input_path)
 
     if not file_path.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {input_path}")
 
-    return input_path, output_json
+    return input_path, output_json, save_json_path
 
 
 def main() -> None:
-    input_path, output_json = parse_args(sys.argv)
+    input_path, output_json, save_json_path = parse_args(sys.argv)
 
     response = build_agent_response(input_path)
+
+    if save_json_path:
+        save_json_response(response, save_json_path)
 
     if output_json:
         print_json_response(response)
     else:
         print_human_response(response)
+
+        if save_json_path:
+            print("")
+            print(f"Decisão salva em: {save_json_path}")
 
     if response["decision"]["document_type"] == "desconhecido":
         sys.exit(1)

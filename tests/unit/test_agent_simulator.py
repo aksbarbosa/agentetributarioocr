@@ -1,5 +1,7 @@
+import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -62,11 +64,42 @@ def test_agent_simulator_json_cli():
     assert '"schema_path": "skill/schemas/extracted_bem_veiculo.json"' in result.stdout
 
 
+def test_agent_simulator_save_json_cli():
+    path = PROJECT_ROOT / "tests" / "fixtures" / "raw_text" / "crlv_veiculo_exemplo.txt"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output_path = Path(temp_dir) / "agent-decision.json"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "tools/agent_simulator.py",
+                str(path),
+                "--save-json",
+                str(output_path),
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert output_path.exists()
+
+        with output_path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        assert data["classification"]["document_type"] == "bem_veiculo"
+        assert data["decision"]["should_continue"] is True
+        assert data["decision"]["schema_path"] == "skill/schemas/extracted_bem_veiculo.json"
+
+
 def run_tests():
     test_agent_simulator_bem_veiculo()
     test_agent_simulator_bem_imovel()
     test_agent_simulator_recibo_medico()
     test_agent_simulator_json_cli()
+    test_agent_simulator_save_json_cli()
     print("test_agent_simulator.py: todos os testes passaram.")
 
 
