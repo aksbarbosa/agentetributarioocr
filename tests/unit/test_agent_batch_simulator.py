@@ -1,0 +1,83 @@
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TOOLS_DIR = PROJECT_ROOT / "tools"
+
+sys.path.insert(0, str(TOOLS_DIR))
+
+from agent_batch_simulator import build_batch_response
+
+
+def test_agent_batch_simulator_build_response():
+    input_dir = PROJECT_ROOT / "tests" / "fixtures" / "raw_text"
+
+    response = build_batch_response(str(input_dir))
+
+    assert response["total_files"] == 5
+    assert len(response["decisions"]) == 5
+
+    document_types = [
+        item["classification"]["document_type"]
+        for item in response["decisions"]
+    ]
+
+    assert "informe_rendimentos_pj" in document_types
+    assert "recibo_medico" in document_types
+    assert "plano_saude" in document_types
+    assert "bem_imovel" in document_types
+    assert "bem_veiculo" in document_types
+
+    assert response["summary"]["should_continue_count"] == 5
+    assert response["summary"]["requires_manual_review_count"] == 0
+
+
+def test_agent_batch_simulator_cli_outputs():
+    input_dir = PROJECT_ROOT / "tests" / "fixtures" / "raw_text"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output_json = Path(temp_dir) / "agent-decisions.json"
+        output_report = Path(temp_dir) / "agent-decisions.report.md"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "tools/agent_batch_simulator.py",
+                str(input_dir),
+                str(output_json),
+                str(output_report),
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert output_json.exists()
+        assert output_report.exists()
+
+        with output_json.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        assert data["total_files"] == 5
+        assert len(data["decisions"]) == 5
+
+        report_text = output_report.read_text(encoding="utf-8")
+
+        assert "# Relatório de simulação local do agente" in report_text
+        assert "informe_rendimentos_pj" in report_text
+        assert "bem_veiculo" in report_text
+
+
+def run_tests():
+    test_agent_batch_simulator_build_response()
+    test_agent_batch_simulator_cli_outputs()
+    print("test_agent_batch_simulator.py: todos os testes passaram.")
+
+
+if __name__ == "__main__":
+    run_tests()
