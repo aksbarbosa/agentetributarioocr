@@ -97,9 +97,15 @@ relatório humano
 
 ## Documentos suportados atualmente
 
-### 1. Informe de rendimentos PJ
+| Documento | `document_type` | Destino |
+|---|---|---|
+| Informe de rendimentos PJ | `informe_rendimentos_pj` | `rendimentos.tributaveis_pj[]` |
+| Recibo médico | `recibo_medico` | `pagamentos[]` |
+| Plano de saúde | `plano_saude` | `pagamentos[]` |
+| Bem imóvel | `bem_imovel` | `bens[]` |
+| Bem veículo | `bem_veiculo` | `bens[]` |
 
-Tipo:
+### Informe de rendimentos PJ
 
 ```json
 {
@@ -107,21 +113,9 @@ Tipo:
 }
 ```
 
-Gera dados em:
+Gera dados em `rendimentos.tributaveis_pj[]`.
 
-```json
-{
-  "rendimentos": {
-    "tributaveis_pj": []
-  }
-}
-```
-
----
-
-### 2. Recibo médico
-
-Tipo:
+### Recibo médico
 
 ```json
 {
@@ -129,27 +123,9 @@ Tipo:
 }
 ```
 
-Gera dados em:
+Gera dados em `pagamentos[]` com código `10`.
 
-```json
-{
-  "pagamentos": []
-}
-```
-
-com código:
-
-```json
-{
-  "codigo": "10"
-}
-```
-
----
-
-### 3. Plano de saúde
-
-Tipo:
+### Plano de saúde
 
 ```json
 {
@@ -157,27 +133,9 @@ Tipo:
 }
 ```
 
-Gera dados em:
+Gera dados em `pagamentos[]` com código `26`.
 
-```json
-{
-  "pagamentos": []
-}
-```
-
-com código:
-
-```json
-{
-  "codigo": "26"
-}
-```
-
----
-
-### 4. Bem imóvel
-
-Tipo:
+### Bem imóvel
 
 ```json
 {
@@ -185,15 +143,7 @@ Tipo:
 }
 ```
 
-Gera dados em:
-
-```json
-{
-  "bens": []
-}
-```
-
-Nesta fase, o caso implementado é um imóvel simples, como apartamento residencial.
+Gera dados em `bens[]`.
 
 Exemplo atual:
 
@@ -203,11 +153,7 @@ grupo_bem = 01
 codigo_bem = 11
 ```
 
----
-
-### 5. Bem veículo
-
-Tipo:
+### Bem veículo
 
 ```json
 {
@@ -215,15 +161,7 @@ Tipo:
 }
 ```
 
-Gera dados em:
-
-```json
-{
-  "bens": []
-}
-```
-
-Nesta fase, o caso implementado é um veículo automotor terrestre, como automóvel.
+Gera dados em `bens[]`.
 
 Exemplo atual:
 
@@ -315,63 +253,19 @@ irpf_ocr_dec/
 
 ### `inputs/raw/`
 
-Pasta reservada para documentos originais no futuro.
-
-Exemplos futuros:
-
-```text
-informe_empresa.pdf
-recibo_medico.jpg
-plano_saude.pdf
-iptu_apartamento.pdf
-crlv_veiculo.pdf
-```
-
-Atualmente ainda não usamos OCR real, então essa pasta fica vazia, exceto pelo arquivo `.gitkeep`.
-
----
+Pasta reservada para documentos originais no futuro. Atualmente ainda não usamos OCR real, então essa pasta fica vazia, exceto pelo `.gitkeep`.
 
 ### `inputs/extracted/`
 
-Pasta com arquivos JSON de extração.
-
-Esses arquivos simulam a saída futura do OCR + extração estruturada.
-
-Exemplos atuais:
-
-```text
-informe_pj_exemplo.json
-recibo_medico_exemplo.json
-plano_saude_exemplo.json
-bem_imovel_exemplo.json
-bem_veiculo_exemplo.json
-```
-
----
+Pasta com arquivos JSON de extração. Esses arquivos simulam a saída futura do OCR + extração estruturada.
 
 ### `tests/fixtures/raw_text/`
 
 Pasta com textos brutos simulados, usados para testar o classificador simples de documentos e o simulador local de agente.
 
-Exemplos atuais:
-
-```text
-crlv_veiculo_exemplo.txt
-informe_pj_exemplo.txt
-iptu_imovel_exemplo.txt
-plano_saude_exemplo.txt
-recibo_medico_exemplo.txt
-```
-
-Esses arquivos representam textos que futuramente poderiam vir de OCR.
-
----
-
 ### `outputs/`
 
-Pasta onde ficam os resultados gerados.
-
-Arquivos principais:
+Pasta onde ficam os resultados gerados. Arquivos principais:
 
 ```text
 irpf-consolidado.json
@@ -412,21 +306,6 @@ Exemplo atual:
 }
 ```
 
-Esse arquivo define:
-
-- nome do projeto;
-- versão do schema canônico;
-- exercício;
-- ano-calendário;
-- tipo de declaração;
-- modelo;
-- pastas de entrada;
-- caminhos de saída;
-- comportamento diante de extrações inválidas;
-- comportamento diante de erro canônico;
-- ativação da detecção de duplicidade;
-- ativação do relatório humano.
-
 O arquivo de configuração é validado por:
 
 ```text
@@ -439,13 +318,7 @@ Para validar manualmente:
 python3 tools/validate_config.py config/project_config.json
 ```
 
-O comando principal:
-
-```bash
-python3 tools/run_project.py
-```
-
-também valida automaticamente o arquivo de configuração antes de executar o pipeline.
+O comando principal também valida automaticamente o arquivo de configuração antes de executar o pipeline.
 
 O schema formal da configuração está em:
 
@@ -469,31 +342,7 @@ Execute:
 python3 tools/run_project.py
 ```
 
-Esse é o comando principal.
-
-Ele lê automaticamente:
-
-```text
-config/project_config.json
-```
-
-valida a configuração e processa os arquivos de:
-
-```text
-inputs/extracted/
-```
-
----
-
-## Saída esperada
-
-Ao rodar:
-
-```bash
-python3 tools/run_project.py
-```
-
-a saída esperada é parecida com:
+Saída esperada:
 
 ```text
 Validação da configuração:
@@ -530,8 +379,6 @@ open outputs/irpf-consolidado.report.md
 
 ## Checagem de desenvolvimento
 
-O projeto possui um comando para validar a configuração, limpar outputs antigos, rodar o pipeline principal e executar todos os testes automatizados.
-
 Na raiz do projeto, rode:
 
 ```bash
@@ -552,8 +399,6 @@ A saída esperada termina com:
 ```text
 Checagem concluída com sucesso.
 ```
-
-Use esse comando sempre que alterar alguma parte importante do projeto.
 
 ---
 
@@ -595,12 +440,6 @@ Validar uma extração individual:
 python3 tools/validate_extracted.py inputs/extracted/informe_pj_exemplo.json
 ```
 
-Validar a extração de veículo:
-
-```bash
-python3 tools/validate_extracted.py inputs/extracted/bem_veiculo_exemplo.json
-```
-
 Rodar pipeline para uma extração individual:
 
 ```bash
@@ -619,40 +458,16 @@ Rodar pipeline em lote usando configuração:
 python3 tools/pipeline_batch.py --config config/project_config.json
 ```
 
-Testar se um JSON está bem formado:
-
-```bash
-python3 -m json.tool caminho/do/arquivo.json
-```
-
-Classificar texto bruto simulado de veículo:
+Classificar texto bruto simulado:
 
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
-Classificar texto bruto simulado de IPTU:
+Classificar texto bruto simulado com saída JSON:
 
 ```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/iptu_imovel_exemplo.txt
-```
-
-Classificar texto bruto simulado de recibo médico:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/recibo_medico_exemplo.txt
-```
-
-Classificar texto bruto simulado de informe PJ:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/informe_pj_exemplo.txt
-```
-
-Classificar texto bruto simulado de plano de saúde:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/plano_saude_exemplo.txt
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 ```
 
 Simular decisão local do agente:
@@ -665,6 +480,18 @@ Simular decisão local do agente com saída JSON:
 
 ```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Salvar decisão local do agente em JSON:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+Conferir a decisão salva:
+
+```bash
+cat outputs/agent-decision.json
 ```
 
 ---
@@ -681,37 +508,6 @@ tools/classify_document.py
 
 Ele recebe um arquivo de texto e tenta identificar o `document_type`.
 
-Exemplo:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-```
-
-Saída esperada:
-
-```text
-Classificação do documento:
-- document_type: bem_veiculo
-- label: Bem veículo
-- confidence: high
-
-Pontuação:
-- bem_veiculo: 8
-- informe_rendimentos_pj: 0
-- recibo_medico: 0
-- plano_saude: 0
-- bem_imovel: 0
-
-Palavras-chave encontradas:
-- bem_veiculo: CRLV, RENAVAM, PLACA, VEICULO, AUTOMOVEL, MARCA, MODELO, ANO FABRICACAO
-```
-
-Também existe saída JSON:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
-
 Tipos reconhecidos atualmente:
 
 ```text
@@ -723,9 +519,13 @@ bem_veiculo
 desconhecido
 ```
 
-O classificador ainda não lê PDF ou imagem diretamente. Ele pressupõe que o texto já foi obtido por OCR ou por fixture simulada.
+Também existe saída JSON:
 
-Fixtures atuais de texto bruto:
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Fixtures atuais:
 
 ```text
 tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
@@ -735,7 +535,7 @@ tests/fixtures/raw_text/plano_saude_exemplo.txt
 tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
-Teste automatizado relacionado:
+Teste relacionado:
 
 ```text
 tests/unit/test_classify_document.py
@@ -775,35 +575,39 @@ Exemplo:
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
-Saída humana esperada:
-
-```text
-Simulação do agente
-
-Arquivo analisado: tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-
-Classificação:
-- document_type: bem_veiculo
-- label: Bem veículo
-- confidence: high
-- best_score: 8
-- second_score: 0
-
-Decisão:
-- Deve continuar: True
-- Schema recomendado: skill/schemas/extracted_bem_veiculo.json
-- Próximo passo: Criar uma extração estruturada JSON com os campos do veículo e depois validar com tools/validate_extracted.py.
-```
-
-Também há saída JSON:
+Também há saída JSON no terminal:
 
 ```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 ```
 
+Também é possível salvar a decisão estruturada em arquivo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+Esse JSON contém:
+
+```text
+input_path
+classification
+decision
+```
+
+A seção `decision` informa:
+
+```text
+document_type
+confidence
+should_continue
+schema_path
+next_step
+```
+
 Esse simulador ainda não é o agente Agno final. Ele serve para testar localmente a lógica de decisão antes da integração com Agno.
 
-Teste automatizado relacionado:
+Teste relacionado:
 
 ```text
 tests/unit/test_agent_simulator.py
@@ -814,8 +618,6 @@ tests/unit/test_agent_simulator.py
 ## JSON canônico
 
 O JSON canônico é o formato interno da declaração.
-
-Ele concentra os dados extraídos e normalizados.
 
 Exemplo simplificado:
 
@@ -841,18 +643,6 @@ Exemplo simplificado:
   "requires_review": []
 }
 ```
-
----
-
-## Destinos no JSON canônico
-
-| Documento | `document_type` | Destino |
-|---|---|---|
-| Informe de rendimentos PJ | `informe_rendimentos_pj` | `rendimentos.tributaveis_pj[]` |
-| Recibo médico | `recibo_medico` | `pagamentos[]` |
-| Plano de saúde | `plano_saude` | `pagamentos[]` |
-| Bem imóvel | `bem_imovel` | `bens[]` |
-| Bem veículo | `bem_veiculo` | `bens[]` |
 
 ---
 
@@ -911,8 +701,6 @@ Exemplo simplificado:
 
 Todos os valores monetários são armazenados em centavos inteiros.
 
-Exemplo:
-
 ```text
 R$ 85.000,00   → 8500000
 R$ 500,00      → 50000
@@ -921,30 +709,18 @@ R$ 80.000,00   → 8000000
 R$ 250.000,00  → 25000000
 ```
 
----
-
 ### CPF e CNPJ
 
 CPF e CNPJ são armazenados apenas com dígitos.
-
-Exemplo:
 
 ```text
 123.456.789-09     → 12345678909
 11.222.333/0001-81 → 11222333000181
 ```
 
----
-
 ### Datas
 
-Datas são armazenadas no formato:
-
-```text
-DDMMAAAA
-```
-
-Exemplo:
+Datas são armazenadas no formato `DDMMAAAA`.
 
 ```text
 15/03/2025 → 15032025
@@ -952,13 +728,9 @@ Exemplo:
 20/08/2020 → 20082020
 ```
 
----
-
 ### Nomes
 
 Nomes são normalizados em maiúsculas e sem acentos nesta fase.
-
-Exemplo:
 
 ```text
 José da Silva → JOSE DA SILVA
@@ -997,57 +769,7 @@ O projeto já valida:
 
 ---
 
-## Avisos e pendências
-
-O JSON consolidado possui dois campos importantes:
-
-```json
-"avisos": []
-```
-
-e:
-
-```json
-"requires_review": []
-```
-
----
-
-### `avisos`
-
-Usado para problemas detectados durante processamento, por exemplo:
-
-```text
-pagamento possivelmente duplicado
-conflito nos dados do declarante
-RENAVAM com quantidade incomum de dígitos
-placa com tamanho incomum
-```
-
-Esses avisos não necessariamente bloqueiam o pipeline, mas devem ser revisados.
-
----
-
-### `requires_review`
-
-Usado para campos que vieram com baixa confiança na extração, por exemplo:
-
-```text
-campo extraído com confidence = low
-campo obrigatório ausente
-```
-
-Exemplo atual:
-
-```text
-matricula do bem imóvel com baixa confiança
-```
-
----
-
 ## Testes automatizados
-
-O projeto possui testes simples em Python puro.
 
 Para rodar todos:
 
@@ -1084,8 +806,6 @@ Funções de normalização:
 - datas;
 - valores monetários.
 
----
-
 ### `tools/agent_simulator.py`
 
 Protótipo local de comportamento de agente.
@@ -1098,137 +818,41 @@ Recebe texto bruto, chama o classificador simples e retorna:
 - schema recomendado;
 - próximo passo sugerido.
 
-Esse arquivo ainda não é a integração final com Agno, mas representa a primeira camada de decisão local.
-
----
-
 ### `tools/classify_document.py`
 
 Classificador simples por palavras-chave.
 
-Recebe texto bruto e retorna:
-
-- `document_type`;
-- rótulo humano;
-- confiança;
-- pontuação por tipo de documento;
-- palavras-chave encontradas.
-
-Reconhece atualmente:
-
-```text
-informe_rendimentos_pj
-recibo_medico
-plano_saude
-bem_imovel
-bem_veiculo
-desconhecido
-```
-
----
-
 ### `tools/validate_config.py`
 
-Valida o arquivo:
-
-```text
-config/project_config.json
-```
-
-Verifica:
-
-- campos obrigatórios;
-- tipos esperados;
-- tipo de declaração;
-- modelo;
-- coerência entre exercício e ano-calendário;
-- existência da pasta de extrações;
-- extensões dos arquivos de saída.
-
----
+Valida o arquivo `config/project_config.json`.
 
 ### `tools/validate_extracted.py`
 
 Valida extrações estruturadas.
 
-Reconhece atualmente:
-
-```text
-informe_rendimentos_pj
-recibo_medico
-plano_saude
-bem_imovel
-bem_veiculo
-```
-
----
-
 ### `tools/build_canonical_json.py`
 
 Converte uma extração validada em JSON canônico parcial.
-
----
 
 ### `tools/pipeline_batch.py`
 
 Processa várias extrações e consolida em um único JSON canônico.
 
-Também respeita flags do `project_config.json`, como:
-
-```text
-fail_on_invalid_extraction
-fail_on_canonical_error
-enable_duplicate_detection
-enable_human_review_report
-```
-
----
-
 ### `tools/report.py`
 
 Gera relatório humano em Markdown.
-
-O relatório mostra seções para:
-
-- declarante;
-- validação;
-- rendimentos tributáveis PJ;
-- pagamentos;
-- bens e direitos;
-- detalhes de imóvel;
-- detalhes de veículo;
-- pendências de revisão;
-- próximos passos.
-
----
 
 ### `tools/run_project.py`
 
 Comando principal do projeto.
 
-Ele:
-
-1. carrega `config/project_config.json`;
-2. valida a configuração;
-3. executa o pipeline em lote;
-4. gera outputs.
-
----
-
 ### `tools/clean_outputs.py`
 
 Remove outputs conhecidos.
 
----
-
 ### `tools/dev_check.py`
 
-Roda:
-
-1. validação da configuração;
-2. limpeza de outputs;
-3. pipeline principal;
-4. testes automatizados.
+Roda validação da configuração, limpeza de outputs, pipeline principal e testes automatizados.
 
 ---
 
