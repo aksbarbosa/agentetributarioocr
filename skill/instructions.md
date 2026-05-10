@@ -135,7 +135,9 @@ Fixtures atuais:
 
 ```text
 tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+tests/fixtures/raw_text/informe_pj_exemplo.txt
 tests/fixtures/raw_text/iptu_imovel_exemplo.txt
+tests/fixtures/raw_text/plano_saude_exemplo.txt
 tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
@@ -702,9 +704,8 @@ Neste estágio, o agente não deve prometer:
 
 1. Atualizar `skill/references/pipeline.md` com o classificador.
 2. Atualizar `CHANGELOG.md` com o classificador.
-3. Expandir fixtures de texto bruto para informe PJ e plano de saúde.
-4. Melhorar o classificador simples.
-5. Criar OCR real.
-6. Criar builder `.DEC` experimental.
-7. Criar parser reverso `.DEC`.
-8. Criar testes automatizados adicionais.
+3. Melhorar o classificador simples.
+4. Criar OCR real.
+5. Criar builder `.DEC` experimental.
+6. Criar parser reverso `.DEC`.
+7. Criar testes automatizados adicionais.

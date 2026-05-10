@@ -321,7 +321,9 @@ Exemplos atuais:
 
 ```text
 crlv_veiculo_exemplo.txt
+informe_pj_exemplo.txt
 iptu_imovel_exemplo.txt
+plano_saude_exemplo.txt
 recibo_medico_exemplo.txt
 ```
 
@@ -1109,16 +1111,15 @@ CHANGELOG.md
 
 ## Próximas etapas planejadas
 
-1. Expandir fixtures de texto bruto para informe PJ e plano de saúde.
-2. Melhorar o classificador simples de documentos.
-3. Preparar OCR real.
-4. Criar camada de leitura de PDF/imagem.
-5. Criar builder `.DEC` experimental.
-6. Criar parser reverso `.DEC`.
-7. Expandir suporte a dependentes, investimentos e outros rendimentos.
-8. Criar testes adicionais para novos documentos.
-9. Melhorar schemas formais.
-10. Integrar a skill ao agente Agno.
+1. Melhorar o classificador simples de documentos.
+2. Preparar OCR real.
+3. Criar camada de leitura de PDF/imagem.
+4. Criar builder `.DEC` experimental.
+5. Criar parser reverso `.DEC`.
+6. Expandir suporte a dependentes, investimentos e outros rendimentos.
+7. Criar testes adicionais para novos documentos.
+8. Melhorar schemas formais.
+9. Integrar a skill ao agente Agno.
 
 ---
 

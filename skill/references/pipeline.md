@@ -125,7 +125,9 @@ Arquivos atuais:
 
 ```text
 crlv_veiculo_exemplo.txt
+informe_pj_exemplo.txt
 iptu_imovel_exemplo.txt
+plano_saude_exemplo.txt
 recibo_medico_exemplo.txt
 ```
 

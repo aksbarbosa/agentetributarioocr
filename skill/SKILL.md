@@ -129,7 +129,9 @@ Fixtures atuais de texto bruto:
 
 ```text
 tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+tests/fixtures/raw_text/informe_pj_exemplo.txt
 tests/fixtures/raw_text/iptu_imovel_exemplo.txt
+tests/fixtures/raw_text/plano_saude_exemplo.txt
 tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
@@ -695,10 +697,9 @@ A skill ainda não faz:
 1. Atualizar `skill/instructions.md` com o classificador.
 2. Atualizar `skill/references/pipeline.md` com o classificador.
 3. Atualizar `CHANGELOG.md` com o classificador.
-4. Expandir fixtures de texto bruto para informe PJ e plano de saúde.
-5. Melhorar o classificador simples.
-6. Preparar OCR real.
-7. Criar builder `.DEC` experimental.
-8. Criar parser reverso `.DEC`.
-9. Criar testes adicionais para novos documentos.
-10. Integrar a skill ao agente Agno.
+4. Melhorar o classificador simples.
+5. Preparar OCR real.
+6. Criar builder `.DEC` experimental.
+7. Criar parser reverso `.DEC`.
+8. Criar testes adicionais para novos documentos.
+9. Integrar a skill ao agente Agno.
