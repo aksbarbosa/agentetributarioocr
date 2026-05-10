@@ -10,6 +10,24 @@ sys.path.insert(0, str(TOOLS_DIR))
 from classify_document import classify_document_file, classify_document_text
 
 
+def test_classify_informe_pj_file():
+    path = PROJECT_ROOT / "tests" / "fixtures" / "raw_text" / "informe_pj_exemplo.txt"
+
+    result = classify_document_file(str(path))
+
+    assert result["document_type"] == "informe_rendimentos_pj"
+    assert result["confidence"] in {"high", "medium"}
+
+
+def test_classify_plano_saude_file():
+    path = PROJECT_ROOT / "tests" / "fixtures" / "raw_text" / "plano_saude_exemplo.txt"
+
+    result = classify_document_file(str(path))
+
+    assert result["document_type"] == "plano_saude"
+    assert result["confidence"] in {"high", "medium"}
+
+
 def test_classify_bem_veiculo_file():
     path = PROJECT_ROOT / "tests" / "fixtures" / "raw_text" / "crlv_veiculo_exemplo.txt"
 
@@ -45,6 +63,8 @@ def test_classify_unknown_text():
 
 
 def run_tests():
+    test_classify_informe_pj_file()
+    test_classify_plano_saude_file()
     test_classify_bem_veiculo_file()
     test_classify_bem_imovel_file()
     test_classify_recibo_medico_file()
