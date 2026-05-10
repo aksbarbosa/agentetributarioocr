@@ -1,6 +1,6 @@
 # IRPF OCR DEC
 
-Projeto experimental para construção de uma skill/agente capaz de auxiliar na montagem inicial da Declaração de Imposto de Renda Pessoa Física a partir de documentos digitalizados ou extrações estruturadas.
+Projeto experimental para construção de uma skill/agente capaz de auxiliar na montagem inicial da Declaração de Imposto de Renda Pessoa Física a partir de documentos digitalizados, textos extraídos ou extrações estruturadas.
 
 A ideia central do projeto é transformar documentos fiscais em um JSON canônico revisável e, futuramente, gerar um arquivo `.DEC` experimental importável no PGD oficial da Receita Federal.
 
@@ -18,8 +18,8 @@ Este projeto não substitui:
 O objetivo é funcionar como um pré-processador inteligente:
 
 1. organiza documentos;
-2. extrai informações;
-3. classifica documentos;
+2. classifica documentos;
+3. extrai informações;
 4. normaliza dados;
 5. valida inconsistências;
 6. gera um relatório humano;
@@ -33,11 +33,17 @@ A responsabilidade final pela declaração continua sendo do contribuinte.
 
 Nesta fase, o projeto ainda **não faz OCR real** e ainda **não gera `.DEC`**.
 
-Atualmente ele processa **extrações simuladas em JSON** e possui um classificador simples de documentos a partir de texto bruto simulado.
+Atualmente ele possui três blocos funcionais:
 
-O classificador ainda não lê PDF ou imagem diretamente. Ele recebe texto e tenta identificar o `document_type`.
+1. **Classificador simples de documentos** a partir de texto bruto simulado;
+2. **Simulador local de agente**, que classifica o texto e sugere o próximo passo;
+3. **Pipeline principal**, que processa extrações simuladas em JSON e gera JSON canônico consolidado + relatório humano.
 
-Fluxo atual do classificador:
+O classificador e o simulador ainda não leem PDF ou imagem diretamente. Eles recebem texto previamente extraído ou fixtures simuladas.
+
+---
+
+## Fluxo atual do classificador
 
 ```text
 tests/fixtures/raw_text/
@@ -47,7 +53,27 @@ tools/classify_document.py
 document_type provável
 ```
 
-Fluxo atual do pipeline principal:
+---
+
+## Fluxo atual do simulador local de agente
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão
+    ↓
+schema recomendado
+    ↓
+próximo passo
+```
+
+---
+
+## Fluxo atual do pipeline principal
 
 ```text
 inputs/extracted/
@@ -172,9 +198,9 @@ Nesta fase, o caso implementado é um imóvel simples, como apartamento residenc
 Exemplo atual:
 
 ```text
+tipo_bem = IMOVEL
 grupo_bem = 01
 codigo_bem = 11
-tipo_bem = IMOVEL
 ```
 
 ---
@@ -202,9 +228,9 @@ Nesta fase, o caso implementado é um veículo automotor terrestre, como automó
 Exemplo atual:
 
 ```text
+tipo_bem = VEICULO
 grupo_bem = 02
 codigo_bem = 01
-tipo_bem = VEICULO
 ```
 
 ---
@@ -219,7 +245,13 @@ irpf_ocr_dec/
 │   └── project_config.json
 ├── inputs/
 │   ├── raw/
+│   │   └── .gitkeep
 │   └── extracted/
+│       ├── bem_imovel_exemplo.json
+│       ├── bem_veiculo_exemplo.json
+│       ├── informe_pj_exemplo.json
+│       ├── plano_saude_exemplo.json
+│       └── recibo_medico_exemplo.json
 ├── outputs/
 │   ├── irpf-consolidado.json
 │   └── irpf-consolidado.report.md
@@ -244,10 +276,13 @@ irpf_ocr_dec/
 │   ├── fixtures/
 │   │   └── raw_text/
 │   │       ├── crlv_veiculo_exemplo.txt
+│   │       ├── informe_pj_exemplo.txt
 │   │       ├── iptu_imovel_exemplo.txt
+│   │       ├── plano_saude_exemplo.txt
 │   │       └── recibo_medico_exemplo.txt
 │   ├── run_tests.py
 │   └── unit/
+│       ├── test_agent_simulator.py
 │       ├── test_build_canonical_json.py
 │       ├── test_classify_document.py
 │       ├── test_clean_outputs.py
@@ -259,6 +294,7 @@ irpf_ocr_dec/
 │       ├── test_validate_config.py
 │       └── test_validate_extracted.py
 └── tools/
+    ├── agent_simulator.py
     ├── build_canonical_json.py
     ├── classify_document.py
     ├── clean_outputs.py
@@ -291,7 +327,7 @@ iptu_apartamento.pdf
 crlv_veiculo.pdf
 ```
 
-Atualmente ainda não usamos OCR real, então essa pasta fica vazia.
+Atualmente ainda não usamos OCR real, então essa pasta fica vazia, exceto pelo arquivo `.gitkeep`.
 
 ---
 
@@ -299,7 +335,7 @@ Atualmente ainda não usamos OCR real, então essa pasta fica vazia.
 
 Pasta com arquivos JSON de extração.
 
-Esses arquivos simulam a saída futura do OCR.
+Esses arquivos simulam a saída futura do OCR + extração estruturada.
 
 Exemplos atuais:
 
@@ -315,7 +351,7 @@ bem_veiculo_exemplo.json
 
 ### `tests/fixtures/raw_text/`
 
-Pasta com textos brutos simulados, usados para testar o classificador simples de documentos.
+Pasta com textos brutos simulados, usados para testar o classificador simples de documentos e o simulador local de agente.
 
 Exemplos atuais:
 
@@ -341,6 +377,8 @@ Arquivos principais:
 irpf-consolidado.json
 irpf-consolidado.report.md
 ```
+
+Esses arquivos são gerados automaticamente pelo pipeline e normalmente não devem ser versionados no Git.
 
 ---
 
@@ -605,6 +643,30 @@ Classificar texto bruto simulado de recibo médico:
 python3 tools/classify_document.py tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
+Classificar texto bruto simulado de informe PJ:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/informe_pj_exemplo.txt
+```
+
+Classificar texto bruto simulado de plano de saúde:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/plano_saude_exemplo.txt
+```
+
+Simular decisão local do agente:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Simular decisão local do agente com saída JSON:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
 ---
 
 ## Classificador simples de documentos
@@ -639,6 +701,15 @@ Pontuação:
 - recibo_medico: 0
 - plano_saude: 0
 - bem_imovel: 0
+
+Palavras-chave encontradas:
+- bem_veiculo: CRLV, RENAVAM, PLACA, VEICULO, AUTOMOVEL, MARCA, MODELO, ANO FABRICACAO
+```
+
+Também existe saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 ```
 
 Tipos reconhecidos atualmente:
@@ -658,7 +729,9 @@ Fixtures atuais de texto bruto:
 
 ```text
 tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+tests/fixtures/raw_text/informe_pj_exemplo.txt
 tests/fixtures/raw_text/iptu_imovel_exemplo.txt
+tests/fixtures/raw_text/plano_saude_exemplo.txt
 tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
@@ -666,6 +739,74 @@ Teste automatizado relacionado:
 
 ```text
 tests/unit/test_classify_document.py
+```
+
+---
+
+## Simulador local de agente
+
+O projeto possui um primeiro protótipo local de comportamento de agente:
+
+```text
+tools/agent_simulator.py
+```
+
+Ele recebe um arquivo de texto bruto, chama o classificador simples e retorna uma decisão estruturada.
+
+Fluxo atual:
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão
+    ↓
+schema recomendado
+    ↓
+próximo passo
+```
+
+Exemplo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Saída humana esperada:
+
+```text
+Simulação do agente
+
+Arquivo analisado: tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+
+Classificação:
+- document_type: bem_veiculo
+- label: Bem veículo
+- confidence: high
+- best_score: 8
+- second_score: 0
+
+Decisão:
+- Deve continuar: True
+- Schema recomendado: skill/schemas/extracted_bem_veiculo.json
+- Próximo passo: Criar uma extração estruturada JSON com os campos do veículo e depois validar com tools/validate_extracted.py.
+```
+
+Também há saída JSON:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Esse simulador ainda não é o agente Agno final. Ele serve para testar localmente a lógica de decisão antes da integração com Agno.
+
+Teste automatizado relacionado:
+
+```text
+tests/unit/test_agent_simulator.py
 ```
 
 ---
@@ -927,6 +1068,7 @@ run_project.py
 report.py
 clean_outputs.py
 classify_document.py
+agent_simulator.py
 ```
 
 ---
@@ -944,6 +1086,22 @@ Funções de normalização:
 
 ---
 
+### `tools/agent_simulator.py`
+
+Protótipo local de comportamento de agente.
+
+Recebe texto bruto, chama o classificador simples e retorna:
+
+- classificação provável;
+- confiança;
+- decisão de continuar ou não;
+- schema recomendado;
+- próximo passo sugerido.
+
+Esse arquivo ainda não é a integração final com Agno, mas representa a primeira camada de decisão local.
+
+---
+
 ### `tools/classify_document.py`
 
 Classificador simples por palavras-chave.
@@ -953,7 +1111,8 @@ Recebe texto bruto e retorna:
 - `document_type`;
 - rótulo humano;
 - confiança;
-- pontuação por tipo de documento.
+- pontuação por tipo de documento;
+- palavras-chave encontradas.
 
 Reconhece atualmente:
 
@@ -1099,6 +1258,26 @@ skill/
 
 ---
 
+## Git e versionamento
+
+Fluxo recomendado:
+
+```bash
+git status
+python3 tools/dev_check.py
+git add .
+git commit -m "Mensagem objetiva do que mudou"
+git push
+```
+
+Antes de commitar, sempre rode:
+
+```bash
+python3 tools/dev_check.py
+```
+
+---
+
 ## Histórico de mudanças
 
 O histórico das principais etapas implementadas está em:
@@ -1111,15 +1290,16 @@ CHANGELOG.md
 
 ## Próximas etapas planejadas
 
-1. Melhorar o classificador simples de documentos.
-2. Preparar OCR real.
-3. Criar camada de leitura de PDF/imagem.
-4. Criar builder `.DEC` experimental.
-5. Criar parser reverso `.DEC`.
-6. Expandir suporte a dependentes, investimentos e outros rendimentos.
-7. Criar testes adicionais para novos documentos.
-8. Melhorar schemas formais.
-9. Integrar a skill ao agente Agno.
+1. Melhorar o simulador local de agente.
+2. Melhorar o classificador simples de documentos.
+3. Preparar OCR real.
+4. Criar camada de leitura de PDF/imagem.
+5. Criar builder `.DEC` experimental.
+6. Criar parser reverso `.DEC`.
+7. Expandir suporte a dependentes, investimentos e outros rendimentos.
+8. Criar testes adicionais para novos documentos.
+9. Melhorar schemas formais.
+10. Integrar a skill ao agente Agno.
 
 ---
 
@@ -1147,6 +1327,7 @@ O projeto segue a ideia:
 
 ```text
 OCR é probabilístico.
+Classificação inicial pode ser probabilística ou heurística.
 Validação e geração de saída devem ser determinísticas.
 ```
 
@@ -1161,9 +1342,11 @@ O fluxo correto é:
 ```text
 documento
     ↓
-extração
+OCR ou texto extraído
     ↓
 classificação
+    ↓
+extração estruturada
     ↓
 JSON canônico
     ↓
