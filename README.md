@@ -33,13 +33,14 @@ A responsabilidade final pela declaração continua sendo do contribuinte.
 
 Nesta fase, o projeto ainda **não faz OCR real** e ainda **não gera `.DEC`**.
 
-Atualmente ele possui três blocos funcionais:
+Atualmente ele possui quatro blocos funcionais:
 
 1. **Classificador simples de documentos** a partir de texto bruto simulado;
-2. **Simulador local de agente**, que classifica o texto e sugere o próximo passo;
-3. **Pipeline principal**, que processa extrações simuladas em JSON e gera JSON canônico consolidado + relatório humano.
+2. **Simulador local de agente individual**, que classifica um texto e sugere o próximo passo;
+3. **Simulador local de agente em lote**, que processa uma pasta de textos e gera decisões consolidadas;
+4. **Pipeline principal**, que processa extrações simuladas em JSON e gera JSON canônico consolidado + relatório humano.
 
-O classificador e o simulador ainda não leem PDF ou imagem diretamente. Eles recebem texto previamente extraído ou fixtures simuladas.
+O classificador e os simuladores ainda não leem PDF ou imagem diretamente. Eles recebem texto previamente extraído ou fixtures simuladas.
 
 ---
 
@@ -69,6 +70,24 @@ decisão
 schema recomendado
     ↓
 próximo passo
+```
+
+---
+
+## Fluxo atual do simulador local de agente em lote
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_batch_simulator.py
+    ↓
+classificação de cada documento
+    ↓
+decisão individual por documento
+    ↓
+outputs/agent-decisions.json
+    ↓
+outputs/agent-decisions.report.md
 ```
 
 ---
@@ -105,72 +124,6 @@ relatório humano
 | Bem imóvel | `bem_imovel` | `bens[]` |
 | Bem veículo | `bem_veiculo` | `bens[]` |
 
-### Informe de rendimentos PJ
-
-```json
-{
-  "document_type": "informe_rendimentos_pj"
-}
-```
-
-Gera dados em `rendimentos.tributaveis_pj[]`.
-
-### Recibo médico
-
-```json
-{
-  "document_type": "recibo_medico"
-}
-```
-
-Gera dados em `pagamentos[]` com código `10`.
-
-### Plano de saúde
-
-```json
-{
-  "document_type": "plano_saude"
-}
-```
-
-Gera dados em `pagamentos[]` com código `26`.
-
-### Bem imóvel
-
-```json
-{
-  "document_type": "bem_imovel"
-}
-```
-
-Gera dados em `bens[]`.
-
-Exemplo atual:
-
-```text
-tipo_bem = IMOVEL
-grupo_bem = 01
-codigo_bem = 11
-```
-
-### Bem veículo
-
-```json
-{
-  "document_type": "bem_veiculo"
-}
-```
-
-Gera dados em `bens[]`.
-
-Exemplo atual:
-
-```text
-tipo_bem = VEICULO
-grupo_bem = 02
-codigo_bem = 01
-```
-
 ---
 
 ## Estrutura do projeto
@@ -191,8 +144,6 @@ irpf_ocr_dec/
 │       ├── plano_saude_exemplo.json
 │       └── recibo_medico_exemplo.json
 ├── outputs/
-│   ├── irpf-consolidado.json
-│   └── irpf-consolidado.report.md
 ├── skill/
 │   ├── SKILL.md
 │   ├── instructions.md
@@ -203,13 +154,6 @@ irpf_ocr_dec/
 │   │   ├── pipeline.md
 │   │   └── tipos_documentos.md
 │   └── schemas/
-│       ├── canonical_irpf_2026.json
-│       ├── extracted_bem_imovel.json
-│       ├── extracted_bem_veiculo.json
-│       ├── extracted_informe_pj.json
-│       ├── extracted_plano_saude.json
-│       ├── extracted_recibo_medico.json
-│       └── project_config.json
 ├── tests/
 │   ├── fixtures/
 │   │   └── raw_text/
@@ -220,6 +164,7 @@ irpf_ocr_dec/
 │   │       └── recibo_medico_exemplo.txt
 │   ├── run_tests.py
 │   └── unit/
+│       ├── test_agent_batch_simulator.py
 │       ├── test_agent_simulator.py
 │       ├── test_build_canonical_json.py
 │       ├── test_classify_document.py
@@ -232,6 +177,7 @@ irpf_ocr_dec/
 │       ├── test_validate_config.py
 │       └── test_validate_extracted.py
 └── tools/
+    ├── agent_batch_simulator.py
     ├── agent_simulator.py
     ├── build_canonical_json.py
     ├── classify_document.py
@@ -253,7 +199,9 @@ irpf_ocr_dec/
 
 ### `inputs/raw/`
 
-Pasta reservada para documentos originais no futuro. Atualmente ainda não usamos OCR real, então essa pasta fica vazia, exceto pelo `.gitkeep`.
+Pasta reservada para documentos originais no futuro.
+
+Atualmente ainda não usamos OCR real, então essa pasta fica vazia, exceto pelo arquivo `.gitkeep`.
 
 ### `inputs/extracted/`
 
@@ -261,18 +209,21 @@ Pasta com arquivos JSON de extração. Esses arquivos simulam a saída futura do
 
 ### `tests/fixtures/raw_text/`
 
-Pasta com textos brutos simulados, usados para testar o classificador simples de documentos e o simulador local de agente.
+Pasta com textos brutos simulados, usados para testar o classificador simples, o simulador individual e o simulador em lote.
 
 ### `outputs/`
 
-Pasta onde ficam os resultados gerados. Arquivos principais:
+Pasta onde ficam os resultados gerados:
 
 ```text
 irpf-consolidado.json
 irpf-consolidado.report.md
+agent-decision.json
+agent-decisions.json
+agent-decisions.report.md
 ```
 
-Esses arquivos são gerados automaticamente pelo pipeline e normalmente não devem ser versionados no Git.
+Esses arquivos são gerados automaticamente e normalmente não devem ser versionados no Git.
 
 ---
 
@@ -306,26 +257,6 @@ Exemplo atual:
 }
 ```
 
-O arquivo de configuração é validado por:
-
-```text
-tools/validate_config.py
-```
-
-Para validar manualmente:
-
-```bash
-python3 tools/validate_config.py config/project_config.json
-```
-
-O comando principal também valida automaticamente o arquivo de configuração antes de executar o pipeline.
-
-O schema formal da configuração está em:
-
-```text
-skill/schemas/project_config.json
-```
-
 ---
 
 ## Como rodar o projeto
@@ -334,52 +265,12 @@ Na raiz do projeto:
 
 ```bash
 cd ~/Documents/irpf_ocr_dec
-```
-
-Execute:
-
-```bash
 python3 tools/run_project.py
-```
-
-Saída esperada:
-
-```text
-Validação da configuração:
-Configuração válida.
-
-Pipeline em lote finalizado.
-Pasta de entrada: inputs/extracted
-JSON consolidado: outputs/irpf-consolidado.json
-Relatório consolidado: outputs/irpf-consolidado.report.md
-Arquivos processados: 5
-Arquivos ignorados: 0
-Extrações inválidas fatais: 0
-
-Validação do JSON consolidado: válido.
-```
-
----
-
-## Ver os resultados
-
-Para ver o JSON consolidado:
-
-```bash
-cat outputs/irpf-consolidado.json
-```
-
-Para abrir o relatório:
-
-```bash
-open outputs/irpf-consolidado.report.md
 ```
 
 ---
 
 ## Checagem de desenvolvimento
-
-Na raiz do projeto, rode:
 
 ```bash
 python3 tools/dev_check.py
@@ -388,16 +279,10 @@ python3 tools/dev_check.py
 Esse comando executa:
 
 ```text
-1. python3 tools/validate_config.py config/project_config.json
-2. python3 tools/clean_outputs.py
-3. python3 tools/run_project.py
-4. python3 tests/run_tests.py
-```
-
-A saída esperada termina com:
-
-```text
-Checagem concluída com sucesso.
+1. validate_config.py
+2. clean_outputs.py
+3. run_project.py
+4. tests/run_tests.py
 ```
 
 ---
@@ -410,61 +295,25 @@ Rodar o projeto:
 python3 tools/run_project.py
 ```
 
-Validar configuração:
-
-```bash
-python3 tools/validate_config.py config/project_config.json
-```
-
 Rodar testes:
 
 ```bash
 python3 tests/run_tests.py
 ```
 
-Rodar checagem completa de desenvolvimento:
+Rodar checagem completa:
 
 ```bash
 python3 tools/dev_check.py
 ```
 
-Limpar outputs:
-
-```bash
-python3 tools/clean_outputs.py
-```
-
-Validar uma extração individual:
-
-```bash
-python3 tools/validate_extracted.py inputs/extracted/informe_pj_exemplo.json
-```
-
-Rodar pipeline para uma extração individual:
-
-```bash
-python3 tools/pipeline_from_extracted.py inputs/extracted/recibo_medico_exemplo.json
-```
-
-Rodar pipeline em lote diretamente pela pasta:
-
-```bash
-python3 tools/pipeline_batch.py inputs/extracted
-```
-
-Rodar pipeline em lote usando configuração:
-
-```bash
-python3 tools/pipeline_batch.py --config config/project_config.json
-```
-
-Classificar texto bruto simulado:
+Classificar texto bruto:
 
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
-Classificar texto bruto simulado com saída JSON:
+Classificar texto bruto com JSON:
 
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
@@ -476,29 +325,33 @@ Simular decisão local do agente:
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
-Simular decisão local do agente com saída JSON:
+Simular decisão local com JSON:
 
 ```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 ```
 
-Salvar decisão local do agente em JSON:
+Salvar decisão local em JSON:
 
 ```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
 ```
 
-Conferir a decisão salva:
+Simular decisões locais em lote:
 
 ```bash
-cat outputs/agent-decision.json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
+```
+
+Simular decisões em lote com caminhos customizados:
+
+```bash
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 ```
 
 ---
 
 ## Classificador simples de documentos
-
-O projeto possui um classificador inicial baseado em palavras-chave.
 
 Arquivo principal:
 
@@ -506,9 +359,15 @@ Arquivo principal:
 tools/classify_document.py
 ```
 
-Ele recebe um arquivo de texto e tenta identificar o `document_type`.
+Ele recebe texto bruto e retorna:
 
-Tipos reconhecidos atualmente:
+- `document_type`;
+- rótulo humano;
+- confiança;
+- pontuação por tipo de documento;
+- palavras-chave encontradas.
+
+Tipos reconhecidos:
 
 ```text
 informe_rendimentos_pj
@@ -519,33 +378,11 @@ bem_veiculo
 desconhecido
 ```
 
-Também existe saída JSON:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
-
-Fixtures atuais:
-
-```text
-tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-tests/fixtures/raw_text/informe_pj_exemplo.txt
-tests/fixtures/raw_text/iptu_imovel_exemplo.txt
-tests/fixtures/raw_text/plano_saude_exemplo.txt
-tests/fixtures/raw_text/recibo_medico_exemplo.txt
-```
-
-Teste relacionado:
-
-```text
-tests/unit/test_classify_document.py
-```
-
 ---
 
 ## Simulador local de agente
 
-O projeto possui um primeiro protótipo local de comportamento de agente:
+Arquivo principal:
 
 ```text
 tools/agent_simulator.py
@@ -553,41 +390,7 @@ tools/agent_simulator.py
 
 Ele recebe um arquivo de texto bruto, chama o classificador simples e retorna uma decisão estruturada.
 
-Fluxo atual:
-
-```text
-tests/fixtures/raw_text/
-    ↓
-tools/agent_simulator.py
-    ↓
-classificação
-    ↓
-decisão
-    ↓
-schema recomendado
-    ↓
-próximo passo
-```
-
-Exemplo:
-
-```bash
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-```
-
-Também há saída JSON no terminal:
-
-```bash
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
-
-Também é possível salvar a decisão estruturada em arquivo:
-
-```bash
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
-```
-
-Esse JSON contém:
+A decisão contém:
 
 ```text
 input_path
@@ -605,19 +408,34 @@ schema_path
 next_step
 ```
 
-Esse simulador ainda não é o agente Agno final. Ele serve para testar localmente a lógica de decisão antes da integração com Agno.
+---
 
-Teste relacionado:
+## Simulador local de agente em lote
+
+Arquivo principal:
 
 ```text
-tests/unit/test_agent_simulator.py
+tools/agent_batch_simulator.py
 ```
+
+Ele recebe uma pasta com arquivos `.txt`, executa o simulador local para cada texto e gera:
+
+```text
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+```
+
+O simulador em lote produz:
+
+- decisões individuais;
+- resumo por tipo de documento;
+- resumo por confiança;
+- contagem de documentos que podem continuar;
+- contagem de documentos que exigem revisão manual.
 
 ---
 
 ## JSON canônico
-
-O JSON canônico é o formato interno da declaração.
 
 Exemplo simplificado:
 
@@ -646,101 +464,6 @@ Exemplo simplificado:
 
 ---
 
-## Exemplo de bem imóvel no JSON canônico
-
-```json
-{
-  "tipo_bem": "IMOVEL",
-  "grupo_bem": "01",
-  "codigo_bem": "11",
-  "descricao": "APARTAMENTO RESIDENCIAL LOCALIZADO NA RUA DAS FLORES, NUMERO 123, BAIRRO CENTRO, SAO PAULO SP",
-  "valor_anterior": 25000000,
-  "valor_atual": 25000000,
-  "endereco": {
-    "cep": "01234567",
-    "logradouro": "RUA DAS FLORES",
-    "numero": "123",
-    "bairro": "CENTRO",
-    "municipio": "SAO PAULO",
-    "uf": "SP"
-  },
-  "iptu": "1234567890",
-  "matricula": "12345",
-  "data_aquisicao": "10052020",
-  "beneficiario_tipo": "T"
-}
-```
-
----
-
-## Exemplo de bem veículo no JSON canônico
-
-```json
-{
-  "tipo_bem": "VEICULO",
-  "grupo_bem": "02",
-  "codigo_bem": "01",
-  "descricao": "AUTOMOVEL MARCA TOYOTA, MODELO COROLLA XEI, ANO 2020, PLACA ABC1D23",
-  "valor_anterior": 8000000,
-  "valor_atual": 8000000,
-  "renavam": "12345678901",
-  "placa": "ABC1D23",
-  "marca": "TOYOTA",
-  "modelo": "COROLLA XEI",
-  "ano_fabricacao": "2020",
-  "data_aquisicao": "20082020",
-  "beneficiario_tipo": "T"
-}
-```
-
----
-
-## Regras importantes
-
-### Valores monetários
-
-Todos os valores monetários são armazenados em centavos inteiros.
-
-```text
-R$ 85.000,00   → 8500000
-R$ 500,00      → 50000
-R$ 3.600,00    → 360000
-R$ 80.000,00   → 8000000
-R$ 250.000,00  → 25000000
-```
-
-### CPF e CNPJ
-
-CPF e CNPJ são armazenados apenas com dígitos.
-
-```text
-123.456.789-09     → 12345678909
-11.222.333/0001-81 → 11222333000181
-```
-
-### Datas
-
-Datas são armazenadas no formato `DDMMAAAA`.
-
-```text
-15/03/2025 → 15032025
-10/05/2020 → 10052020
-20/08/2020 → 20082020
-```
-
-### Nomes
-
-Nomes são normalizados em maiúsculas e sem acentos nesta fase.
-
-```text
-José da Silva → JOSE DA SILVA
-São Paulo     → SAO PAULO
-Toyota        → TOYOTA
-Corolla XEI   → COROLLA XEI
-```
-
----
-
 ## Validações atuais
 
 O projeto já valida:
@@ -758,7 +481,6 @@ O projeto já valida:
 - conflitos em dados do declarante;
 - bens imóveis básicos;
 - bens veículos básicos;
-- grupo e código do bem;
 - CEP;
 - UF;
 - data de aquisição de bem;
@@ -770,12 +492,6 @@ O projeto já valida:
 ---
 
 ## Testes automatizados
-
-Para rodar todos:
-
-```bash
-python3 tests/run_tests.py
-```
 
 Atualmente os testes cobrem:
 
@@ -791,94 +507,32 @@ report.py
 clean_outputs.py
 classify_document.py
 agent_simulator.py
+agent_batch_simulator.py
 ```
 
 ---
 
 ## Ferramentas principais
 
-### `tools/normalize.py`
+### `tools/agent_batch_simulator.py`
 
-Funções de normalização:
-
-- CPF/CNPJ;
-- nomes;
-- datas;
-- valores monetários.
+Protótipo local de comportamento de agente em lote.
 
 ### `tools/agent_simulator.py`
 
-Protótipo local de comportamento de agente.
-
-Recebe texto bruto, chama o classificador simples e retorna:
-
-- classificação provável;
-- confiança;
-- decisão de continuar ou não;
-- schema recomendado;
-- próximo passo sugerido.
+Protótipo local de comportamento de agente individual.
 
 ### `tools/classify_document.py`
 
 Classificador simples por palavras-chave.
 
-### `tools/validate_config.py`
-
-Valida o arquivo `config/project_config.json`.
-
-### `tools/validate_extracted.py`
-
-Valida extrações estruturadas.
-
-### `tools/build_canonical_json.py`
-
-Converte uma extração validada em JSON canônico parcial.
-
-### `tools/pipeline_batch.py`
-
-Processa várias extrações e consolida em um único JSON canônico.
-
-### `tools/report.py`
-
-Gera relatório humano em Markdown.
-
 ### `tools/run_project.py`
 
 Comando principal do projeto.
 
-### `tools/clean_outputs.py`
-
-Remove outputs conhecidos.
-
 ### `tools/dev_check.py`
 
-Roda validação da configuração, limpeza de outputs, pipeline principal e testes automatizados.
-
----
-
-## Skill
-
-A pasta `skill/` contém a documentação e contratos internos da skill.
-
-```text
-skill/
-├── SKILL.md
-├── instructions.md
-├── references/
-│   ├── codigos_bens.md
-│   ├── codigos_pagamentos.md
-│   ├── json_canonico.md
-│   ├── pipeline.md
-│   └── tipos_documentos.md
-└── schemas/
-    ├── canonical_irpf_2026.json
-    ├── extracted_bem_imovel.json
-    ├── extracted_bem_veiculo.json
-    ├── extracted_informe_pj.json
-    ├── extracted_plano_saude.json
-    ├── extracted_recibo_medico.json
-    └── project_config.json
-```
+Roda validação de configuração, limpeza, pipeline principal e testes.
 
 ---
 
@@ -894,35 +548,19 @@ git commit -m "Mensagem objetiva do que mudou"
 git push
 ```
 
-Antes de commitar, sempre rode:
-
-```bash
-python3 tools/dev_check.py
-```
-
----
-
-## Histórico de mudanças
-
-O histórico das principais etapas implementadas está em:
-
-```text
-CHANGELOG.md
-```
-
 ---
 
 ## Próximas etapas planejadas
 
-1. Melhorar o simulador local de agente.
-2. Melhorar o classificador simples de documentos.
-3. Preparar OCR real.
-4. Criar camada de leitura de PDF/imagem.
-5. Criar builder `.DEC` experimental.
-6. Criar parser reverso `.DEC`.
-7. Expandir suporte a dependentes, investimentos e outros rendimentos.
-8. Criar testes adicionais para novos documentos.
-9. Melhorar schemas formais.
+1. Melhorar o simulador local de agente em lote.
+2. Melhorar o simulador local de agente individual.
+3. Melhorar o classificador simples de documentos.
+4. Preparar OCR real.
+5. Criar camada de leitura de PDF/imagem.
+6. Criar builder `.DEC` experimental.
+7. Criar parser reverso `.DEC`.
+8. Expandir suporte a dependentes, investimentos e outros rendimentos.
+9. Criar testes adicionais para novos documentos.
 10. Integrar a skill ao agente Agno.
 
 ---
@@ -947,18 +585,10 @@ O projeto ainda não possui:
 
 ## Filosofia do projeto
 
-O projeto segue a ideia:
-
 ```text
 OCR é probabilístico.
 Classificação inicial pode ser probabilística ou heurística.
 Validação e geração de saída devem ser determinísticas.
-```
-
-Por isso, o fluxo nunca deve ser:
-
-```text
-documento → .DEC
 ```
 
 O fluxo correto é:
