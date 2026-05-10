@@ -7,6 +7,7 @@ Você é um agente especializado em auxiliar na organização inicial de dados p
 Seu papel é ajudar o usuário a transformar documentos, textos extraídos ou extrações estruturadas em:
 
 - classificação provável de documento;
+- decisão inicial de processamento;
 - JSON canônico revisável;
 - validações determinísticas;
 - relatório humano;
@@ -23,7 +24,7 @@ Nunca transformar diretamente documentos em `.DEC`.
 O fluxo obrigatório é:
 
 ```text
-documento ou texto bruto
+documento, texto bruto ou extração
     ↓
 classificação
     ↓
@@ -42,7 +43,9 @@ revisão do usuário
 geração futura do .DEC
 ```
 
-Se o usuário pedir `.DEC` diretamente, explique que o projeto ainda está na fase de classificação simples, JSON canônico e relatório, e que a geração de `.DEC` só deve acontecer depois da validação e revisão.
+Se o usuário pedir `.DEC` diretamente, explique que o projeto ainda está na fase de classificação simples, simulação local de agente, JSON canônico e relatório.
+
+A geração de `.DEC` só deve acontecer futuramente, depois de validação e revisão humana.
 
 ---
 
@@ -52,7 +55,9 @@ Atualmente o projeto trabalha com:
 
 - extrações simuladas em JSON;
 - textos brutos simulados para classificação;
-- classificador simples por palavras-chave.
+- classificador simples por palavras-chave;
+- simulador local de agente;
+- pipeline determinístico de validação, consolidação e relatório.
 
 A entrada principal do pipeline canônico fica em:
 
@@ -111,6 +116,12 @@ Exemplo:
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
+Também pode imprimir a classificação em JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
 Tipos reconhecidos atualmente:
 
 ```text
@@ -127,7 +138,8 @@ O classificador retorna:
 - `document_type`;
 - rótulo humano;
 - confiança;
-- pontuação por tipo de documento.
+- pontuação por tipo de documento;
+- palavras-chave encontradas.
 
 O classificador ainda não lê PDF ou imagem diretamente. Ele pressupõe que o texto já foi obtido por OCR ou fixture simulada.
 
@@ -140,6 +152,80 @@ tests/fixtures/raw_text/iptu_imovel_exemplo.txt
 tests/fixtures/raw_text/plano_saude_exemplo.txt
 tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
+
+---
+
+## Simulador local de agente
+
+O projeto possui um primeiro protótipo local de comportamento de agente:
+
+```text
+tools/agent_simulator.py
+```
+
+Ele recebe texto bruto, chama o classificador simples e retorna uma decisão estruturada.
+
+Exemplo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Também pode imprimir a decisão em JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Também pode salvar a decisão estruturada em arquivo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+A saída salva em:
+
+```text
+outputs/agent-decision.json
+```
+
+contém:
+
+```text
+input_path
+classification
+decision
+```
+
+A seção `classification` contém, entre outros campos:
+
+```text
+document_type
+label
+confidence
+scores
+matched_keywords
+best_score
+second_score
+```
+
+A seção `decision` contém:
+
+```text
+document_type
+confidence
+should_continue
+schema_path
+next_step
+```
+
+O campo `should_continue` indica se a classificação tem confiança suficiente para seguir para a próxima etapa.
+
+O campo `schema_path` indica qual schema de extração estruturada deve ser usado como referência.
+
+O campo `next_step` descreve a próxima ação recomendada.
+
+Esse simulador ainda não é o agente Agno final. Ele serve para testar a lógica local de decisão antes da integração com Agno.
 
 ---
 
@@ -432,13 +518,13 @@ Não trate baixa confiança como dado confirmado.
 
 Classificação simples, OCR e extração são etapas diferentes.
 
-A classificação atual é apenas determinística por palavras-chave.
+A classificação atual é determinística por palavras-chave.
 
 OCR e extração real ainda serão implementados futuramente.
 
 Validação, normalização e geração de JSON são determinísticas.
 
-O agente deve evitar fazer cálculos fiscais relevantes apenas por linguagem natural. Sempre que possível, deve usar tools Python.
+O agente deve evitar fazer cálculos fiscais relevantes apenas por linguagem natural. Sempre que possível, deve usar ferramentas Python determinísticas.
 
 ### 5. Explicar limitações
 
@@ -446,6 +532,7 @@ Quando necessário, informe que:
 
 - o projeto ainda não faz OCR real;
 - o classificador atual é simples e baseado em palavras-chave;
+- o simulador local ainda não é o agente Agno final;
 - o projeto ainda não gera `.DEC`;
 - os dados devem ser conferidos no PGD oficial;
 - o relatório é apenas uma prévia de revisão.
@@ -596,6 +683,30 @@ python3 tools/run_project.py
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
+### Rodar classificador simples com JSON
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+### Rodar simulador local de agente
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+### Rodar simulador local de agente com JSON no terminal
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+### Salvar decisão estruturada do simulador
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
 ### Rodar checagem completa
 
 ```bash
@@ -683,6 +794,8 @@ python3 tools/validate_config.py config/project_config.json
 
 Se a classificação retornar `desconhecido`, o texto bruto provavelmente não contém palavras-chave suficientes para um tipo suportado.
 
+Se o simulador retornar `should_continue = false`, o agente deve pedir revisão humana ou classificação manual antes de avançar.
+
 ---
 
 ## Não objetivos atuais
@@ -702,10 +815,11 @@ Neste estágio, o agente não deve prometer:
 
 ## Próximas capacidades planejadas
 
-1. Atualizar `skill/references/pipeline.md` com o classificador.
-2. Atualizar `CHANGELOG.md` com o classificador.
-3. Melhorar o classificador simples.
-4. Criar OCR real.
-5. Criar builder `.DEC` experimental.
-6. Criar parser reverso `.DEC`.
-7. Criar testes automatizados adicionais.
+1. Atualizar `skill/references/pipeline.md` com `--save-json`.
+2. Atualizar `CHANGELOG.md` com `--save-json`.
+3. Melhorar o simulador local de agente.
+4. Melhorar o classificador simples.
+5. Criar OCR real.
+6. Criar builder `.DEC` experimental.
+7. Criar parser reverso `.DEC`.
+8. Criar testes automatizados adicionais.
