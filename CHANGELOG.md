@@ -26,6 +26,7 @@ O projeto foi definido como uma base experimental para:
 
 - receber documentos, textos extraídos ou extrações estruturadas;
 - classificar documentos;
+- simular decisão inicial de agente;
 - normalizar dados;
 - gerar JSON canônico;
 - validar inconsistências;
@@ -51,6 +52,8 @@ Com funções para:
 - normalizar nomes;
 - converter dinheiro para centavos;
 - normalizar datas.
+
+---
 
 ### Classificação simples de documentos
 
@@ -83,7 +86,9 @@ Arquivos atuais:
 
 ```text
 crlv_veiculo_exemplo.txt
+informe_pj_exemplo.txt
 iptu_imovel_exemplo.txt
+plano_saude_exemplo.txt
 recibo_medico_exemplo.txt
 ```
 
@@ -93,11 +98,107 @@ Teste automatizado criado:
 tests/unit/test_classify_document.py
 ```
 
+O classificador também suporta saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
 Observação:
 
 - ainda não há OCR real;
 - o classificador não lê PDF ou imagem diretamente;
 - ele pressupõe que o texto já foi extraído ou simulado.
+
+---
+
+### Simulador local de agente
+
+Implementado:
+
+```text
+tools/agent_simulator.py
+```
+
+O simulador local recebe texto bruto, chama o classificador simples e retorna uma decisão estruturada.
+
+Fluxo atual:
+
+```text
+texto bruto simulado
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão
+    ↓
+schema recomendado
+    ↓
+próximo passo
+```
+
+Ele retorna:
+
+```text
+input_path
+classification
+decision
+```
+
+A seção `classification` contém:
+
+```text
+document_type
+label
+confidence
+scores
+matched_keywords
+best_score
+second_score
+```
+
+A seção `decision` contém:
+
+```text
+document_type
+confidence
+should_continue
+schema_path
+next_step
+```
+
+Comando de uso humano:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Comando com saída JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Comando para salvar decisão estruturada em arquivo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+Teste automatizado criado:
+
+```text
+tests/unit/test_agent_simulator.py
+```
+
+Observação:
+
+- o simulador ainda não é o agente Agno final;
+- ele serve para testar localmente a lógica de decisão;
+- a opção `--save-json` aproxima o fluxo de uma futura tool consumível por agente.
+
+---
 
 ### Validação canônica
 
@@ -272,6 +373,8 @@ tools/pipeline_from_extracted.py
 
 Processa uma extração individual.
 
+---
+
 ### Pipeline em lote
 
 Implementado:
@@ -301,6 +404,8 @@ O pipeline em lote também:
 - detecta pagamentos possivelmente duplicados;
 - valida o JSON canônico consolidado;
 - gera relatório humano.
+
+---
 
 ### Comando principal
 
@@ -364,8 +469,16 @@ Atualmente:
 
 - `inputs/raw/` está reservado para documentos reais futuros;
 - `inputs/extracted/` contém extrações simuladas;
-- `tests/fixtures/raw_text/` contém textos brutos simulados para o classificador;
-- `outputs/` recebe JSON consolidado e relatório.
+- `tests/fixtures/raw_text/` contém textos brutos simulados para o classificador e o simulador local;
+- `outputs/` recebe JSON consolidado, relatório e decisões estruturadas opcionais.
+
+Saídas conhecidas:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/agent-decision.json
+```
 
 ---
 
@@ -445,6 +558,8 @@ tools/clean_outputs.py
 
 Remove outputs gerados conhecidos.
 
+---
+
 ### Checagem de desenvolvimento
 
 Implementado:
@@ -495,6 +610,7 @@ test_report.py
 test_clean_outputs.py
 test_run_project.py
 test_classify_document.py
+test_agent_simulator.py
 ```
 
 Comando:
@@ -543,7 +659,14 @@ skill/schemas/project_config.json
 
 ## Estado atual
 
-O projeto já possui uma versão local funcional com extrações simuladas e classificador simples de textos.
+O projeto já possui uma versão local funcional com:
+
+- extrações simuladas;
+- classificador simples de textos;
+- simulador local de agente;
+- pipeline determinístico;
+- relatório humano;
+- testes automatizados.
 
 Fluxo atual de classificação:
 
@@ -553,6 +676,16 @@ tests/fixtures/raw_text/
 tools/classify_document.py
     ↓
 document_type provável
+```
+
+Fluxo atual de simulação local de agente:
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_simulator.py
+    ↓
+decisão estruturada
 ```
 
 Fluxo atual do pipeline principal:
@@ -606,7 +739,7 @@ O projeto ainda não possui:
 
 ## Próximas etapas planejadas
 
-1. Expandir fixtures de texto bruto para informe PJ e plano de saúde.
+1. Melhorar o simulador local de agente.
 2. Melhorar o classificador simples.
 3. Preparar camada de OCR real.
 4. Criar leitor de PDF/imagem.
