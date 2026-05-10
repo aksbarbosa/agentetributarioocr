@@ -2,7 +2,13 @@
 
 Este arquivo documenta o fluxo atual do projeto.
 
-O pipeline atual trabalha com extrações simuladas em JSON e textos brutos simulados para classificação.
+O pipeline atual trabalha com:
+
+- extrações simuladas em JSON;
+- textos brutos simulados para classificação;
+- classificador simples por palavras-chave;
+- simulador local de agente;
+- validação e consolidação determinística.
 
 Ainda não há OCR real, leitura direta de PDF/imagem ou geração `.DEC`.
 
@@ -33,9 +39,27 @@ tools/classify_document.py
 document_type provável
 ```
 
+E uma etapa inicial de simulação local de agente:
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão
+    ↓
+schema recomendado
+    ↓
+próximo passo
+```
+
 ---
 
 ## Fluxo geral atual
+
+### 1. Classificação simples
 
 ```text
 texto bruto simulado
@@ -45,7 +69,23 @@ tools/classify_document.py
 document_type provável
 ```
 
-Depois, para o pipeline principal:
+### 2. Simulação local de agente
+
+```text
+texto bruto simulado
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão estruturada
+    ↓
+schema recomendado
+    ↓
+próximo passo sugerido
+```
+
+### 3. Pipeline principal
 
 ```text
 config/project_config.json
@@ -98,6 +138,12 @@ Classificação do documento:
 - confidence: high
 ```
 
+Também pode imprimir saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
 Tipos reconhecidos atualmente:
 
 ```text
@@ -110,6 +156,95 @@ desconhecido
 ```
 
 O classificador atual é determinístico e baseado em palavras-chave. Ele ainda não substitui OCR real nem classificação robusta por IA.
+
+---
+
+## Simulador local de agente
+
+O simulador local está em:
+
+```text
+tools/agent_simulator.py
+```
+
+Ele recebe texto bruto, chama o classificador simples e retorna uma decisão estruturada.
+
+Exemplo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Saída esperada:
+
+```text
+Simulação do agente
+
+Classificação:
+- document_type: bem_veiculo
+- label: Bem veículo
+- confidence: high
+
+Decisão:
+- Deve continuar: True
+- Schema recomendado: skill/schemas/extracted_bem_veiculo.json
+```
+
+Também pode imprimir a decisão em JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Também pode salvar a decisão estruturada em arquivo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+Para conferir:
+
+```bash
+cat outputs/agent-decision.json
+```
+
+O arquivo salvo contém:
+
+```text
+input_path
+classification
+decision
+```
+
+A seção `classification` contém, entre outros campos:
+
+```text
+document_type
+label
+confidence
+scores
+matched_keywords
+best_score
+second_score
+```
+
+A seção `decision` contém:
+
+```text
+document_type
+confidence
+should_continue
+schema_path
+next_step
+```
+
+O campo `should_continue` indica se a classificação tem confiança suficiente para seguir.
+
+O campo `schema_path` indica qual schema de extração estruturada deve ser usado como referência.
+
+O campo `next_step` descreve a próxima ação recomendada.
+
+Esse simulador ainda não é o agente Agno final. Ele serve para testar localmente a lógica de decisão antes da integração com Agno.
 
 ---
 
@@ -241,6 +376,12 @@ outputs/irpf-consolidado.json
 outputs/irpf-consolidado.report.md
 ```
 
+O simulador local pode gerar:
+
+```text
+outputs/agent-decision.json
+```
+
 O JSON consolidado contém:
 
 ```text
@@ -344,6 +485,30 @@ Rodar classificador simples:
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 ```
 
+Rodar classificador simples com saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Rodar simulador local de agente:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Rodar simulador local de agente com saída JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Salvar decisão estruturada do simulador:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
 Rodar pipeline principal:
 
 ```bash
@@ -384,7 +549,13 @@ O classificador possui teste automatizado em:
 tests/unit/test_classify_document.py
 ```
 
-As fixtures usadas pelo teste ficam em:
+O simulador local possui teste automatizado em:
+
+```text
+tests/unit/test_agent_simulator.py
+```
+
+As fixtures usadas pelos testes ficam em:
 
 ```text
 tests/fixtures/raw_text/
@@ -417,4 +588,26 @@ O classificador simples também reconhece esses tipos, além de:
 desconhecido
 ```
 
+O simulador local já consegue:
+
+```text
+classificar texto bruto
+decidir se deve continuar
+indicar schema recomendado
+sugerir próximo passo
+imprimir JSON
+salvar decisão estruturada em arquivo
+```
+
 Ainda não há OCR real, leitura direta de PDF/imagem, classificação robusta nem geração `.DEC`.
+
+---
+
+## Próximas etapas
+
+1. Atualizar `CHANGELOG.md` com `--save-json`.
+2. Melhorar o simulador local de agente.
+3. Melhorar o classificador simples.
+4. Preparar OCR real.
+5. Criar camada de leitura de PDF/imagem.
+6. Integrar a lógica ao agente Agno.
