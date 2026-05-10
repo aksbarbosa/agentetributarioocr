@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -80,14 +81,16 @@ def score_document_type(text: str, keywords: list[str]) -> int:
     normalized_text = normalize_text(text)
 
     score = 0
+    matched_keywords = []
 
     for keyword in keywords:
         normalized_keyword = normalize_text(keyword)
 
         if normalized_keyword in normalized_text:
             score += 1
+            matched_keywords.append(keyword)
 
-    return score
+    return score, matched_keywords
 
 
 def classify_document_text(text: str) -> dict:
@@ -99,11 +102,15 @@ def classify_document_text(text: str) -> dict:
     - label
     - confidence
     - scores
+    - matched_keywords
     """
     scores = {}
+    matched_keywords_by_type = {}
 
     for document_type, keywords in KEYWORDS_BY_DOCUMENT_TYPE.items():
-        scores[document_type] = score_document_type(text, keywords)
+        score, matched_keywords = score_document_type(text, keywords)
+        scores[document_type] = score
+        matched_keywords_by_type[document_type] = matched_keywords
 
     best_type = max(scores, key=scores.get)
     best_score = scores[best_type]
@@ -121,7 +128,10 @@ def classify_document_text(text: str) -> dict:
             "document_type": "desconhecido",
             "label": DOCUMENT_TYPE_LABELS["desconhecido"],
             "confidence": "low",
-            "scores": scores
+            "scores": scores,
+            "matched_keywords": matched_keywords_by_type,
+            "best_score": best_score,
+            "second_score": second_score
         }
 
     if best_score >= 3 and best_score >= second_score + 2:
@@ -135,7 +145,10 @@ def classify_document_text(text: str) -> dict:
         "document_type": best_type,
         "label": DOCUMENT_TYPE_LABELS[best_type],
         "confidence": confidence,
-        "scores": scores
+        "scores": scores,
+        "matched_keywords": matched_keywords_by_type,
+        "best_score": best_score,
+        "second_score": second_score
     }
 
 
@@ -155,7 +168,7 @@ def classify_document_file(path: str) -> dict:
 
 def print_classification_result(result: dict) -> None:
     """
-    Imprime o resultado da classificação.
+    Imprime o resultado da classificação em formato humano.
     """
     print("Classificação do documento:")
     print(f"- document_type: {result['document_type']}")
@@ -172,22 +185,64 @@ def print_classification_result(result: dict) -> None:
     ):
         print(f"- {document_type}: {score}")
 
+    print("")
+    print("Palavras-chave encontradas:")
 
-def main() -> None:
+    for document_type, keywords in sorted(
+        result["matched_keywords"].items(),
+        key=lambda item: result["scores"][item[0]],
+        reverse=True
+    ):
+        if not keywords:
+            continue
+
+        print(f"- {document_type}: {', '.join(keywords)}")
+
+
+def print_json_result(result: dict) -> None:
     """
+    Imprime o resultado da classificação em JSON.
+    """
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def parse_args(argv: list[str]) -> tuple[str, bool]:
+    """
+    Interpreta argumentos de linha de comando.
+
     Uso:
-        python3 tools/classify_document.py caminho/do/texto.txt
+        python3 tools/classify_document.py arquivo.txt
+        python3 tools/classify_document.py arquivo.txt --json
     """
-    if len(sys.argv) != 2:
+    if len(argv) not in {2, 3}:
         print("Uso:")
         print("python3 tools/classify_document.py caminho/do/texto.txt")
+        print("python3 tools/classify_document.py caminho/do/texto.txt --json")
         sys.exit(1)
 
-    input_path = sys.argv[1]
+    input_path = argv[1]
+    output_json = False
+
+    if len(argv) == 3:
+        if argv[2] != "--json":
+            print("Argumento inválido.")
+            print("Use --json para saída estruturada.")
+            sys.exit(1)
+
+        output_json = True
+
+    return input_path, output_json
+
+
+def main() -> None:
+    input_path, output_json = parse_args(sys.argv)
 
     result = classify_document_file(input_path)
 
-    print_classification_result(result)
+    if output_json:
+        print_json_result(result)
+    else:
+        print_classification_result(result)
 
     if result["document_type"] == "desconhecido":
         sys.exit(1)
