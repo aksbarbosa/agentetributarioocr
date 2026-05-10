@@ -1,0 +1,91 @@
+{
+  "document_type": "bem_imovel",
+  "source_file": "iptu_apartamento_exemplo.pdf",
+  "fields": {
+    "cpf_declarante": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "nome_declarante": {
+      "value": "José da Silva",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "data_nascimento": {
+      "value": "01/01/1980",
+      "confidence": "medium",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "codigo_bem": {
+      "value": "11",
+      "confidence": "high",
+      "source_hint": "Classificação manual: apartamento"
+    },
+    "grupo_bem": {
+      "value": "01",
+      "confidence": "high",
+      "source_hint": "Classificação manual: bens imóveis"
+    },
+    "descricao": {
+      "value": "Apartamento residencial localizado na Rua das Flores, número 123, bairro Centro, São Paulo SP",
+      "confidence": "high",
+      "source_hint": "Descrição montada a partir do IPTU"
+    },
+    "valor_anterior": {
+      "value": "R$ 250.000,00",
+      "confidence": "medium",
+      "source_hint": "Valor declarado em 31/12/2024, informado manualmente para fixture"
+    },
+    "valor_atual": {
+      "value": "R$ 250.000,00",
+      "confidence": "high",
+      "source_hint": "Valor em 31/12/2025"
+    },
+    "cep": {
+      "value": "01234-567",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "logradouro": {
+      "value": "Rua das Flores",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "numero": {
+      "value": "123",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "bairro": {
+      "value": "Centro",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "municipio": {
+      "value": "São Paulo",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "uf": {
+      "value": "SP",
+      "confidence": "high",
+      "source_hint": "IPTU, endereço do imóvel"
+    },
+    "iptu": {
+      "value": "1234567890",
+      "confidence": "medium",
+      "source_hint": "Número do contribuinte no IPTU"
+    },
+    "matricula": {
+      "value": "12345",
+      "confidence": "low",
+      "source_hint": "Matrícula informada manualmente para fixture"
+    },
+    "data_aquisicao": {
+      "value": "10/05/2020",
+      "confidence": "medium",
+      "source_hint": "Data informada manualmente para fixture"
+    }
+  }
+}

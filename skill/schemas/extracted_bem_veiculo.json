@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/extracted_bem_veiculo.json",
+  "title": "Extração de Bem Veículo",
+  "description": "Schema da saída estruturada de extração de um documento relacionado a veículo automotor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_type",
+    "source_file",
+    "fields"
+  ],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "const": "bem_veiculo"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpf_declarante",
+        "nome_declarante",
+        "data_nascimento",
+        "grupo_bem",
+        "codigo_bem",
+        "descricao",
+        "valor_anterior",
+        "valor_atual",
+        "renavam",
+        "placa",
+        "marca",
+        "modelo",
+        "ano_fabricacao",
+        "data_aquisicao"
+      ],
+      "properties": {
+        "cpf_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_nascimento": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "grupo_bem": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "codigo_bem": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "descricao": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_anterior": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_atual": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "renavam": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "placa": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "marca": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "modelo": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "ano_fabricacao": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_aquisicao": {
+          "$ref": "#/$defs/extracted_field"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "extracted_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "confidence",
+        "source_hint"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "null"
+          ],
+          "description": "Valor bruto extraído do documento."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source_hint": {
+          "type": "string",
+          "description": "Indicação textual de onde o campo foi encontrado no documento."
+        }
+      }
+    }
+  }
+}

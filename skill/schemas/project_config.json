@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/project_config.json",
+  "title": "Configuração do Projeto IRPF OCR DEC",
+  "description": "Schema do arquivo config/project_config.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_name",
+    "schema_version",
+    "exercicio",
+    "ano_calendario",
+    "tipo_declaracao",
+    "modelo",
+    "input_raw_dir",
+    "input_extracted_dir",
+    "output_dir",
+    "output_json",
+    "output_report",
+    "fail_on_invalid_extraction",
+    "fail_on_canonical_error",
+    "enable_duplicate_detection",
+    "enable_human_review_report"
+  ],
+  "properties": {
+    "project_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nome do projeto."
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "irpf-2026-v1",
+      "description": "Versão do schema canônico usado pelo projeto."
+    },
+    "exercicio": {
+      "type": "integer",
+      "minimum": 2000,
+      "description": "Ano de exercício da declaração."
+    },
+    "ano_calendario": {
+      "type": "integer",
+      "minimum": 1999,
+      "description": "Ano-calendário da declaração."
+    },
+    "tipo_declaracao": {
+      "type": "string",
+      "enum": [
+        "AJUSTE_ANUAL"
+      ],
+      "description": "Tipo de declaração suportado."
+    },
+    "modelo": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "SIMPLIFICADA",
+        "COMPLETA"
+      ],
+      "description": "Modelo de declaração."
+    },
+    "input_raw_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pasta reservada para documentos brutos."
+    },
+    "input_extracted_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pasta com extrações estruturadas em JSON."
+    },
+    "output_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pasta de saída."
+    },
+    "output_json": {
+      "type": "string",
+      "pattern": "\\.json$",
+      "description": "Caminho do JSON consolidado gerado."
+    },
+    "output_report": {
+      "type": "string",
+      "pattern": "\\.md$",
+      "description": "Caminho do relatório humano gerado."
+    },
+    "fail_on_invalid_extraction": {
+      "type": "boolean",
+      "description": "Se true, extrações inválidas fazem o pipeline falhar."
+    },
+    "fail_on_canonical_error": {
+      "type": "boolean",
+      "description": "Se true, erros no JSON canônico fazem o pipeline falhar."
+    },
+    "enable_duplicate_detection": {
+      "type": "boolean",
+      "description": "Se true, ativa detecção simples de duplicidade."
+    },
+    "enable_human_review_report": {
+      "type": "boolean",
+      "description": "Se true, gera relatório humano em Markdown."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+
+# Outputs gerados
+outputs/*.json
+outputs/*.md
+
+# Arquivos gerados na raiz
+*.canonical.json
+*.report.md
+irpf-consolidado.json
+irpf-gerado.json
+irpf-gerado.report.md
+irpf-2026.report.md
+assalariado_simples.report.md
+
+# Arquivos temporários
+*.tmp
+*.log
+
+# Possíveis documentos reais sensíveis
+inputs/raw/*
+!inputs/raw/.gitkeep

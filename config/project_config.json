@@ -1,0 +1,17 @@
+{
+  "project_name": "IRPF OCR DEC",
+  "schema_version": "irpf-2026-v1",
+  "exercicio": 2026,
+  "ano_calendario": 2025,
+  "tipo_declaracao": "AJUSTE_ANUAL",
+  "modelo": "AUTO",
+  "input_raw_dir": "inputs/raw",
+  "input_extracted_dir": "inputs/extracted",
+  "output_dir": "outputs",
+  "output_json": "outputs/irpf-consolidado.json",
+  "output_report": "outputs/irpf-consolidado.report.md",
+  "fail_on_invalid_extraction": false,
+  "fail_on_canonical_error": true,
+  "enable_duplicate_detection": true,
+  "enable_human_review_report": true
+}

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/extracted_bem_imovel.json",
+  "title": "Extração de Bem Imóvel",
+  "description": "Schema da saída estruturada de extração de um documento relacionado a bem imóvel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_type",
+    "source_file",
+    "fields"
+  ],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "const": "bem_imovel"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpf_declarante",
+        "nome_declarante",
+        "data_nascimento",
+        "codigo_bem",
+        "grupo_bem",
+        "descricao",
+        "valor_anterior",
+        "valor_atual",
+        "cep",
+        "logradouro",
+        "numero",
+        "bairro",
+        "municipio",
+        "uf",
+        "iptu",
+        "matricula",
+        "data_aquisicao"
+      ],
+      "properties": {
+        "cpf_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_nascimento": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "codigo_bem": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "grupo_bem": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "descricao": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_anterior": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_atual": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "cep": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "logradouro": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "numero": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "bairro": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "municipio": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "uf": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "iptu": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "matricula": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_aquisicao": {
+          "$ref": "#/$defs/extracted_field"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "extracted_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "confidence",
+        "source_hint"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "null"
+          ],
+          "description": "Valor bruto extraído do documento."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source_hint": {
+          "type": "string",
+          "description": "Indicação textual de onde o campo foi encontrado no documento."
+        }
+      }
+    }
+  }
+}

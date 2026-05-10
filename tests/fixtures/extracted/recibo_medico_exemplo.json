@@ -1,0 +1,46 @@
+{
+  "document_type": "recibo_medico",
+  "source_file": "recibo_medico_exemplo.pdf",
+  "fields": {
+    "cpf_declarante": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "nome_declarante": {
+      "value": "José da Silva",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "data_nascimento": {
+      "value": "01/01/1980",
+      "confidence": "medium",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "cpf_cnpj_prestador": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Recibo, identificação do profissional"
+    },
+    "nome_prestador": {
+      "value": "Dra. Maria Oliveira",
+      "confidence": "high",
+      "source_hint": "Recibo, identificação do profissional"
+    },
+    "valor_pago": {
+      "value": "R$ 500,00",
+      "confidence": "high",
+      "source_hint": "Recibo, valor do atendimento"
+    },
+    "data_pagamento": {
+      "value": "15/03/2025",
+      "confidence": "high",
+      "source_hint": "Recibo, data do pagamento"
+    },
+    "descricao": {
+      "value": "Consulta médica",
+      "confidence": "medium",
+      "source_hint": "Recibo, descrição do serviço"
+    }
+  }
+}

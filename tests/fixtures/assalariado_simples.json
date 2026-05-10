@@ -1,0 +1,31 @@
+{
+  "$schema": "irpf-2026-v1",
+  "exercicio": 2026,
+  "ano_calendario": 2025,
+  "tipo_declaracao": "AJUSTE_ANUAL",
+  "modelo": "AUTO",
+  "declarante": {
+    "cpf": "12345678909",
+    "nome": "JOSE DA SILVA",
+    "data_nascimento": "01011980"
+  },
+  "rendimentos": {
+    "tributaveis_pj": [
+      {
+        "cnpj_pagador": "11222333000181",
+        "nome_pagador": "EMPRESA EXEMPLO LTDA",
+        "rendimento_total": 8500000,
+        "previdencia_oficial": 850000,
+        "decimo_terceiro": 700000,
+        "irrf": 425000,
+        "irrf_13": 35000,
+        "beneficiario": "TITULAR"
+      }
+    ]
+  },
+  "pagamentos": [],
+  "bens": [],
+  "dividas": [],
+  "avisos": [],
+  "requires_review": []
+}

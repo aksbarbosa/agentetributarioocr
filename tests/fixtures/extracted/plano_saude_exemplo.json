@@ -1,0 +1,46 @@
+{
+  "document_type": "plano_saude",
+  "source_file": "plano_saude_exemplo.pdf",
+  "fields": {
+    "cpf_declarante": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "nome_declarante": {
+      "value": "José da Silva",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "data_nascimento": {
+      "value": "01/01/1980",
+      "confidence": "medium",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "cnpj_operadora": {
+      "value": "11.222.333/0001-81",
+      "confidence": "high",
+      "source_hint": "Informe do plano, identificação da operadora"
+    },
+    "nome_operadora": {
+      "value": "Plano Saúde Exemplo S.A.",
+      "confidence": "high",
+      "source_hint": "Informe do plano, identificação da operadora"
+    },
+    "valor_pago": {
+      "value": "R$ 3.600,00",
+      "confidence": "high",
+      "source_hint": "Informe do plano, total pago no ano"
+    },
+    "valor_nao_dedutivel": {
+      "value": "R$ 0,00",
+      "confidence": "medium",
+      "source_hint": "Informe do plano, parcela não dedutível"
+    },
+    "descricao": {
+      "value": "Plano de saúde",
+      "confidence": "high",
+      "source_hint": "Tipo do documento"
+    }
+  }
+}

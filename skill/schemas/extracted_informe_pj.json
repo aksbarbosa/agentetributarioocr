@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/extracted_informe_pj.json",
+  "title": "Extração de Informe de Rendimentos PJ",
+  "description": "Schema da saída estruturada de extração de um informe de rendimentos de pessoa jurídica.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_type",
+    "source_file",
+    "fields"
+  ],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "const": "informe_rendimentos_pj"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpf_declarante",
+        "nome_declarante",
+        "data_nascimento",
+        "cnpj_pagador",
+        "nome_pagador",
+        "rendimento_total",
+        "previdencia_oficial",
+        "decimo_terceiro",
+        "irrf",
+        "irrf_13"
+      ],
+      "properties": {
+        "cpf_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_nascimento": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "cnpj_pagador": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_pagador": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "rendimento_total": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "previdencia_oficial": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "decimo_terceiro": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "irrf": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "irrf_13": {
+          "$ref": "#/$defs/extracted_field"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "extracted_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "confidence",
+        "source_hint"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "null"
+          ],
+          "description": "Valor bruto extraído do documento."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source_hint": {
+          "type": "string",
+          "description": "Indicação textual de onde o campo foi encontrado no documento."
+        }
+      }
+    }
+  }
+}

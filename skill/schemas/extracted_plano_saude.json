@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/extracted_plano_saude.json",
+  "title": "Extração de Plano de Saúde",
+  "description": "Schema da saída estruturada de extração de um informe de plano de saúde.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_type",
+    "source_file",
+    "fields"
+  ],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "const": "plano_saude"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpf_declarante",
+        "nome_declarante",
+        "data_nascimento",
+        "cnpj_operadora",
+        "nome_operadora",
+        "valor_pago",
+        "valor_nao_dedutivel",
+        "descricao"
+      ],
+      "properties": {
+        "cpf_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_declarante": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "data_nascimento": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "cnpj_operadora": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "nome_operadora": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_pago": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "valor_nao_dedutivel": {
+          "$ref": "#/$defs/extracted_field"
+        },
+        "descricao": {
+          "$ref": "#/$defs/extracted_field"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "extracted_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "confidence",
+        "source_hint"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "null"
+          ],
+          "description": "Valor bruto extraído do documento."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source_hint": {
+          "type": "string",
+          "description": "Indicação textual de onde o campo foi encontrado no documento."
+        }
+      }
+    }
+  }
+}

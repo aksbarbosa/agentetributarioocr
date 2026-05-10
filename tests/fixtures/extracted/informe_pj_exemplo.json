@@ -1,0 +1,56 @@
+{
+  "document_type": "informe_rendimentos_pj",
+  "source_file": "informe_empresa_exemplo.pdf",
+  "fields": {
+    "cpf_declarante": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Página 1, identificação do beneficiário"
+    },
+    "nome_declarante": {
+      "value": "José da Silva",
+      "confidence": "high",
+      "source_hint": "Página 1, identificação do beneficiário"
+    },
+    "data_nascimento": {
+      "value": "01/01/1980",
+      "confidence": "medium",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "cnpj_pagador": {
+      "value": "11.222.333/0001-81",
+      "confidence": "high",
+      "source_hint": "Página 1, identificação da fonte pagadora"
+    },
+    "nome_pagador": {
+      "value": "Empresa Exemplo Ltda",
+      "confidence": "high",
+      "source_hint": "Página 1, identificação da fonte pagadora"
+    },
+    "rendimento_total": {
+      "value": "R$ 85.000,00",
+      "confidence": "high",
+      "source_hint": "Página 1, quadro 3, linha 1"
+    },
+    "previdencia_oficial": {
+      "value": "R$ 8.500,00",
+      "confidence": "high",
+      "source_hint": "Página 1, quadro 3, linha 2"
+    },
+    "decimo_terceiro": {
+      "value": "R$ 7.000,00",
+      "confidence": "high",
+      "source_hint": "Página 1, quadro 5"
+    },
+    "irrf": {
+      "value": "R$ 4.250,00",
+      "confidence": "high",
+      "source_hint": "Página 1, quadro 3, linha 5"
+    },
+    "irrf_13": {
+        "value": "R$ 350,00",
+        "confidence": "medium",
+        "source_hint": "Página 1, quadro 5"
+    }
+  }
+}

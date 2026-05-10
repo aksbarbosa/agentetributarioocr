@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/irpf/schemas/canonical_irpf_2026.json",
+  "title": "IRPF 2026 Canonical JSON",
+  "description": "Schema canônico inicial para representar uma declaração IRPF 2026 antes da geração experimental do arquivo .DEC.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "exercicio",
+    "ano_calendario",
+    "tipo_declaracao",
+    "modelo",
+    "declarante",
+    "rendimentos",
+    "pagamentos",
+    "bens",
+    "dividas",
+    "avisos",
+    "requires_review"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "irpf-2026-v1"
+    },
+    "exercicio": {
+      "type": "integer",
+      "const": 2026
+    },
+    "ano_calendario": {
+      "type": "integer",
+      "const": 2025
+    },
+    "tipo_declaracao": {
+      "type": "string",
+      "enum": [
+        "AJUSTE_ANUAL"
+      ]
+    },
+    "modelo": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "SIMPLIFICADA",
+        "COMPLETA"
+      ]
+    },
+    "declarante": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpf",
+        "nome",
+        "data_nascimento"
+      ],
+      "properties": {
+        "cpf": {
+          "type": "string",
+          "pattern": "^[0-9]{11}$",
+          "description": "CPF do declarante, apenas dígitos."
+        },
+        "nome": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nome do declarante normalizado."
+        },
+        "data_nascimento": {
+          "type": "string",
+          "pattern": "^[0-9]{8}$",
+          "description": "Data de nascimento no formato DDMMAAAA."
+        }
+      }
+    },
+    "rendimentos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tributaveis_pj"
+      ],
+      "properties": {
+        "tributaveis_pj": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rendimento_tributavel_pj"
+          }
+        }
+      }
+    },
+    "pagamentos": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "bens": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "dividas": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "avisos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/aviso"
+      }
+    },
+    "requires_review": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/review_item"
+      }
+    }
+  },
+  "$defs": {
+    "money_cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Valor monetário representado em centavos inteiros."
+    },
+    "rendimento_tributavel_pj": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cnpj_pagador",
+        "nome_pagador",
+        "rendimento_total",
+        "previdencia_oficial",
+        "decimo_terceiro",
+        "irrf",
+        "irrf_13",
+        "beneficiario"
+      ],
+      "properties": {
+        "cnpj_pagador": {
+          "type": "string",
+          "pattern": "^[0-9]{14}$",
+          "description": "CNPJ da fonte pagadora, apenas dígitos."
+        },
+        "nome_pagador": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rendimento_total": {
+          "$ref": "#/$defs/money_cents"
+        },
+        "previdencia_oficial": {
+          "$ref": "#/$defs/money_cents"
+        },
+        "decimo_terceiro": {
+          "$ref": "#/$defs/money_cents"
+        },
+        "irrf": {
+          "$ref": "#/$defs/money_cents"
+        },
+        "irrf_13": {
+          "$ref": "#/$defs/money_cents"
+        },
+        "beneficiario": {
+          "type": "string",
+          "enum": [
+            "TITULAR",
+            "DEPENDENTE"
+          ]
+        }
+      }
+    },
+    "aviso": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "message"
+      ],
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "review_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "reason"
+      ],
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "source_hint": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

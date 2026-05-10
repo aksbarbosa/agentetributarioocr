@@ -1,0 +1,76 @@
+{
+  "document_type": "bem_veiculo",
+  "source_file": "crlv_veiculo_exemplo.pdf",
+  "fields": {
+    "cpf_declarante": {
+      "value": "123.456.789-09",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "nome_declarante": {
+      "value": "José da Silva",
+      "confidence": "high",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "data_nascimento": {
+      "value": "01/01/1980",
+      "confidence": "medium",
+      "source_hint": "Informado manualmente para fixture"
+    },
+    "grupo_bem": {
+      "value": "02",
+      "confidence": "high",
+      "source_hint": "Classificação manual: bens móveis"
+    },
+    "codigo_bem": {
+      "value": "01",
+      "confidence": "high",
+      "source_hint": "Classificação manual: veículo automotor terrestre"
+    },
+    "descricao": {
+      "value": "Automóvel marca Toyota, modelo Corolla XEI, ano 2020, placa ABC1D23",
+      "confidence": "high",
+      "source_hint": "CRLV, identificação do veículo"
+    },
+    "valor_anterior": {
+      "value": "R$ 80.000,00",
+      "confidence": "medium",
+      "source_hint": "Valor declarado em 31/12/2024, informado manualmente para fixture"
+    },
+    "valor_atual": {
+      "value": "R$ 80.000,00",
+      "confidence": "high",
+      "source_hint": "Valor em 31/12/2025"
+    },
+    "renavam": {
+      "value": "12345678901",
+      "confidence": "high",
+      "source_hint": "CRLV, campo RENAVAM"
+    },
+    "placa": {
+      "value": "ABC1D23",
+      "confidence": "high",
+      "source_hint": "CRLV, placa do veículo"
+    },
+    "marca": {
+      "value": "Toyota",
+      "confidence": "high",
+      "source_hint": "CRLV, marca"
+    },
+    "modelo": {
+      "value": "Corolla XEI",
+      "confidence": "high",
+      "source_hint": "CRLV, modelo"
+    },
+    "ano_fabricacao": {
+      "value": "2020",
+      "confidence": "medium",
+      "source_hint": "CRLV, ano de fabricação"
+    },
+    "data_aquisicao": {
+      "value": "20/08/2020",
+      "confidence": "medium",
+      "source_hint": "Data informada manualmente para fixture"
+    }
+  }
+}
