@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Esta skill auxilia na montagem inicial da Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos fiscais digitalizados ou extrações estruturadas.
+Esta skill auxilia na montagem inicial da Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos fiscais digitalizados, textos extraídos ou extrações estruturadas.
 
 O objetivo é transformar documentos como informes de rendimentos, recibos médicos, informes de plano de saúde e documentos de bens em um JSON canônico revisável, validado e acompanhado de relatório humano.
 
@@ -26,9 +26,11 @@ O fluxo correto é sempre:
 ```text
 documento
     ↓
+OCR ou texto extraído
+    ↓
 classificação
     ↓
-extração
+extração estruturada
     ↓
 JSON canônico
     ↓
@@ -53,6 +55,7 @@ Atualmente o projeto:
 
 - processa extrações simuladas em JSON;
 - possui classificador simples por texto bruto simulado;
+- possui simulador local de agente;
 - ainda não possui OCR real;
 - ainda não lê PDF ou imagem diretamente;
 - ainda não gera `.DEC`.
@@ -65,6 +68,22 @@ tests/fixtures/raw_text/
 tools/classify_document.py
     ↓
 document_type provável
+```
+
+Fluxo atual do simulador local de agente:
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/agent_simulator.py
+    ↓
+classificação
+    ↓
+decisão
+    ↓
+schema recomendado
+    ↓
+próximo passo
 ```
 
 Fluxo atual do pipeline principal:
@@ -125,6 +144,12 @@ Classificação do documento:
 - confidence: high
 ```
 
+Também existe saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
 Fixtures atuais de texto bruto:
 
 ```text
@@ -136,6 +161,102 @@ tests/fixtures/raw_text/recibo_medico_exemplo.txt
 ```
 
 O classificador ainda não substitui OCR nem classificação robusta por IA. Ele é uma primeira camada determinística para textos já extraídos.
+
+---
+
+## Simulador local de agente
+
+A skill possui um primeiro protótipo local de comportamento de agente:
+
+```text
+tools/agent_simulator.py
+```
+
+Ele recebe texto bruto, chama o classificador simples e retorna:
+
+- classificação provável;
+- confiança;
+- decisão de continuar;
+- schema recomendado;
+- próximo passo sugerido.
+
+Exemplo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Exemplo de saída humana:
+
+```text
+Simulação do agente
+
+Arquivo analisado: tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+
+Classificação:
+- document_type: bem_veiculo
+- label: Bem veículo
+- confidence: high
+- best_score: 8
+- second_score: 0
+
+Decisão:
+- Deve continuar: True
+- Schema recomendado: skill/schemas/extracted_bem_veiculo.json
+- Próximo passo: Criar uma extração estruturada JSON com os campos do veículo e depois validar com tools/validate_extracted.py.
+```
+
+Também é possível imprimir a decisão em JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+E também salvar a decisão estruturada em arquivo:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+A saída salva em:
+
+```text
+outputs/agent-decision.json
+```
+
+contém:
+
+```text
+input_path
+classification
+decision
+```
+
+A seção `classification` contém, entre outros campos:
+
+```text
+document_type
+label
+confidence
+scores
+matched_keywords
+best_score
+second_score
+```
+
+A seção `decision` contém:
+
+```text
+document_type
+confidence
+should_continue
+schema_path
+next_step
+```
+
+Essa saída estruturada aproxima o simulador de uma futura tool do Agno, pois permite que outro processo consuma a decisão automaticamente.
+
+Esse simulador ainda não é o agente Agno final. Ele serve para testar a lógica local de decisão antes da integração com Agno.
 
 ---
 
@@ -159,6 +280,21 @@ Gera dados em:
     "tributaveis_pj": []
   }
 }
+```
+
+Campos principais:
+
+```text
+cpf_declarante
+nome_declarante
+data_nascimento
+cnpj_pagador
+nome_pagador
+rendimento_total
+previdencia_oficial
+decimo_terceiro
+irrf
+irrf_13
 ```
 
 ---
@@ -189,6 +325,19 @@ com código de pagamento:
 }
 ```
 
+Campos principais:
+
+```text
+cpf_declarante
+nome_declarante
+data_nascimento
+cpf_cnpj_prestador
+nome_prestador
+valor_pago
+data_pagamento
+descricao
+```
+
 ---
 
 ### 3. Plano de saúde
@@ -215,6 +364,19 @@ com código de pagamento:
 {
   "codigo": "26"
 }
+```
+
+Campos principais:
+
+```text
+cpf_declarante
+nome_declarante
+data_nascimento
+cnpj_operadora
+nome_operadora
+valor_pago
+valor_nao_dedutivel
+descricao
 ```
 
 ---
@@ -247,6 +409,28 @@ grupo_bem = 01
 codigo_bem = 11
 ```
 
+Campos principais:
+
+```text
+cpf_declarante
+nome_declarante
+data_nascimento
+codigo_bem
+grupo_bem
+descricao
+valor_anterior
+valor_atual
+cep
+logradouro
+numero
+bairro
+municipio
+uf
+iptu
+matricula
+data_aquisicao
+```
+
 ---
 
 ### 5. Bem veículo
@@ -277,6 +461,25 @@ grupo_bem = 02
 codigo_bem = 01
 ```
 
+Campos principais:
+
+```text
+cpf_declarante
+nome_declarante
+data_nascimento
+grupo_bem
+codigo_bem
+descricao
+valor_anterior
+valor_atual
+renavam
+placa
+marca
+modelo
+ano_fabricacao
+data_aquisicao
+```
+
 ---
 
 ## Arquitetura
@@ -300,6 +503,7 @@ Essa camada ainda será implementada futuramente.
 Responsável por lógica previsível e testável:
 
 - classificação simples por palavras-chave;
+- simulação local de decisão de agente;
 - normalização;
 - validação;
 - geração de JSON canônico;
@@ -347,6 +551,7 @@ irpf_ocr_dec/
 │   └── unit/
 └── tools/
     ├── normalize.py
+    ├── agent_simulator.py
     ├── classify_document.py
     ├── validate.py
     ├── validate_config.py
@@ -437,9 +642,46 @@ Esse comando:
 
 ---
 
+## Comandos de classificação e simulação
+
+Classificar texto bruto:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Classificar texto bruto com saída JSON:
+
+```bash
+python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Simular decisão local do agente:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
+```
+
+Simular decisão local do agente com saída JSON no terminal:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+```
+
+Salvar decisão estruturada do simulador:
+
+```bash
+python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```
+
+---
+
 ## Contrato de entrada atual
 
-A entrada atual da skill é uma extração estruturada em JSON.
+A entrada atual da skill pode ser:
+
+1. texto bruto simulado para classificação;
+2. extração estruturada em JSON para pipeline.
 
 Todo arquivo de extração deve ter:
 
@@ -586,6 +828,16 @@ Contém:
 - pendências de revisão;
 - próximos passos.
 
+### Decisão estruturada do simulador
+
+Quando usado com `--save-json`, o simulador gera:
+
+```text
+outputs/agent-decision.json
+```
+
+Esse arquivo contém a classificação e a decisão sugerida para o próximo passo.
+
 ---
 
 ## Referências internas
@@ -694,12 +946,11 @@ A skill ainda não faz:
 
 ## Próximos passos
 
-1. Atualizar `skill/instructions.md` com o classificador.
-2. Atualizar `skill/references/pipeline.md` com o classificador.
-3. Atualizar `CHANGELOG.md` com o classificador.
-4. Melhorar o classificador simples.
-5. Preparar OCR real.
-6. Criar builder `.DEC` experimental.
-7. Criar parser reverso `.DEC`.
-8. Criar testes adicionais para novos documentos.
-9. Integrar a skill ao agente Agno.
+1. Melhorar o simulador local de agente.
+2. Melhorar o classificador simples.
+3. Preparar OCR real.
+4. Criar camada de leitura de PDF/imagem.
+5. Criar builder `.DEC` experimental.
+6. Criar parser reverso `.DEC`.
+7. Criar testes adicionais para novos documentos.
+8. Integrar a skill ao agente Agno.
