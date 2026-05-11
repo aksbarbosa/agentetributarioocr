@@ -45,31 +45,11 @@ tools/agent_batch_simulator.py
     ↓
 decisões individuais
     ↓
+recommended_action
+    ↓
 outputs/agent-decisions.json
     ↓
 outputs/agent-decisions.report.md
-```
-
-### Pipeline principal
-
-```text
-config/project_config.json
-    ↓
-tools/run_project.py
-    ↓
-validação da configuração
-    ↓
-inputs/extracted/*.json
-    ↓
-validação das extrações
-    ↓
-conversão para JSON canônico parcial
-    ↓
-consolidação
-    ↓
-validação canônica
-    ↓
-relatório humano
 ```
 
 ---
@@ -79,16 +59,49 @@ relatório humano
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+
 python3 tools/run_project.py
 python3 tools/dev_check.py
+```
+
+---
+
+## Decisão recomendada do simulador em lote
+
+O JSON de saída do simulador em lote contém:
+
+```text
+recommended_action
+```
+
+Formato quando pode continuar:
+
+```json
+{
+  "can_continue": true,
+  "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
+  "next_step": "Prosseguir para criação das extrações estruturadas JSON."
+}
+```
+
+Formato quando exige revisão:
+
+```json
+{
+  "can_continue": false,
+  "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
+  "next_step": "Revisar manualmente os documentos marcados antes de continuar."
+}
 ```
 
 ---
@@ -99,6 +112,7 @@ O relatório em lote contém:
 
 ```markdown
 ## Resumo geral
+## Ação recomendada
 ## Resumo por tipo de documento
 ## Resumo por confiança
 ## Status dos documentos
@@ -107,37 +121,3 @@ O relatório em lote contém:
 ## Documentos que exigem revisão manual
 ## Decisões
 ```
-
-A seção `Status dos documentos` separa rapidamente documentos aptos a continuar daqueles que precisam de revisão humana.
-
----
-
-## Saídas atuais
-
-```text
-outputs/irpf-consolidado.json
-outputs/irpf-consolidado.report.md
-outputs/agent-decision.json
-outputs/agent-decisions.json
-outputs/agent-decisions.report.md
-```
-
----
-
-## Tipos suportados
-
-| `document_type` | Destino |
-|---|---|
-| `informe_rendimentos_pj` | `rendimentos.tributaveis_pj[]` |
-| `recibo_medico` | `pagamentos[]` |
-| `plano_saude` | `pagamentos[]` |
-| `bem_imovel` | `bens[]` |
-| `bem_veiculo` | `bens[]` |
-
----
-
-## Estado atual
-
-O projeto já possui classificador individual, simulador individual, simulador em lote, pipeline canônico, relatório humano e testes automatizados.
-
-Ainda não há OCR real, leitura direta de PDF/imagem, classificação robusta nem geração `.DEC`.

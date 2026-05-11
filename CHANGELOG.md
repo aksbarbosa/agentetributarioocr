@@ -10,22 +10,6 @@ Registro das principais etapas implementadas no projeto.
 
 Criada a estrutura inicial do projeto com pastas `config/`, `inputs/`, `outputs/`, `skill/`, `tests/` e `tools/`.
 
-### Objetivo definido
-
-O projeto foi definido como base experimental para classificar documentos, simular decisão de agente, normalizar dados, gerar JSON canônico, validar inconsistências, gerar relatório humano e futuramente gerar `.DEC`.
-
----
-
-## Núcleo determinístico
-
-### Normalização
-
-Implementado:
-
-```text
-tools/normalize.py
-```
-
 ### Classificação simples
 
 Implementado:
@@ -35,17 +19,6 @@ tools/classify_document.py
 tests/unit/test_classify_document.py
 ```
 
-Tipos reconhecidos:
-
-```text
-informe_rendimentos_pj
-recibo_medico
-plano_saude
-bem_imovel
-bem_veiculo
-desconhecido
-```
-
 ### Simulador local individual
 
 Implementado:
@@ -53,14 +26,6 @@ Implementado:
 ```text
 tools/agent_simulator.py
 tests/unit/test_agent_simulator.py
-```
-
-Comandos:
-
-```bash
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
 ```
 
 ### Simulador local em lote
@@ -89,9 +54,42 @@ python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-dec
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
 ```
 
-O relatório do simulador em lote passou a destacar:
+O simulador em lote passou a gerar:
+
+```text
+recommended_action
+```
+
+Esse campo indica:
+
+- se o lote pode continuar;
+- mensagem explicativa;
+- próximo passo recomendado.
+
+Exemplo quando todos os documentos podem continuar:
+
+```json
+{
+  "can_continue": true,
+  "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
+  "next_step": "Prosseguir para criação das extrações estruturadas JSON."
+}
+```
+
+Exemplo quando há documento que exige revisão:
+
+```json
+{
+  "can_continue": false,
+  "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
+  "next_step": "Revisar manualmente os documentos marcados antes de continuar."
+}
+```
+
+O relatório do simulador em lote destaca:
 
 ```markdown
+## Ação recomendada
 ## Status dos documentos
 ### Aptos a continuar
 ### Exigem revisão
@@ -105,96 +103,6 @@ tests/fixtures/raw_text_with_unknown/documento_desconhecido.txt
 ```
 
 Essa fixture testa o cenário em que o lote contém um documento que exige revisão manual.
-
----
-
-## Extrações estruturadas
-
-Implementado suporte a:
-
-```text
-informe_rendimentos_pj
-recibo_medico
-plano_saude
-bem_imovel
-bem_veiculo
-```
-
----
-
-## JSON canônico
-
-Implementado:
-
-```text
-tools/build_canonical_json.py
-```
-
----
-
-## Pipelines
-
-Implementado:
-
-```text
-tools/pipeline_from_extracted.py
-tools/pipeline_batch.py
-tools/run_project.py
-```
-
----
-
-## Relatório humano
-
-Implementado:
-
-```text
-tools/report.py
-```
-
----
-
-## Configuração
-
-Implementado:
-
-```text
-config/project_config.json
-tools/validate_config.py
-skill/schemas/project_config.json
-```
-
----
-
-## Ferramentas de manutenção
-
-Implementado:
-
-```text
-tools/clean_outputs.py
-tools/dev_check.py
-```
-
----
-
-## Testes automatizados
-
-Testes atuais:
-
-```text
-test_normalize.py
-test_validate.py
-test_validate_config.py
-test_validate_extracted.py
-test_build_canonical_json.py
-test_pipeline_batch.py
-test_report.py
-test_clean_outputs.py
-test_run_project.py
-test_classify_document.py
-test_agent_simulator.py
-test_agent_batch_simulator.py
-```
 
 ---
 

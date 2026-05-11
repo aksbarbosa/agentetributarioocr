@@ -14,8 +14,6 @@ No futuro, a skill poderá gerar um arquivo `.DEC` experimental importável no P
 
 Esta skill não substitui PGD oficial, contador, revisão humana ou responsabilidade do contribuinte.
 
-A skill não transmite declaração, não gera recibo `.REC` e não deve prometer conformidade fiscal automática.
-
 ---
 
 ## Estado atual
@@ -71,82 +69,72 @@ tools/agent_batch_simulator.py
     ↓
 decisões por documento
     ↓
+recommended_action
+    ↓
 outputs/agent-decisions.json
     ↓
 outputs/agent-decisions.report.md
-```
-
-### Pipeline principal
-
-```text
-inputs/extracted/
-    ↓
-tools/run_project.py
-    ↓
-JSON canônico consolidado
-    ↓
-relatório humano
 ```
 
 ---
 
 ## Comandos
 
-Classificador:
-
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
 
-Simulador individual:
-
-```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
-```
 
-Simulador em lote:
-
-```bash
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
-```
 
-Pipeline:
-
-```bash
 python3 tools/run_project.py
 python3 tools/dev_check.py
 ```
 
 ---
 
-## Relatório do simulador em lote
+## Decisão recomendada do simulador em lote
 
-O relatório Markdown gerado por:
+O simulador em lote gera `recommended_action`.
 
-```bash
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+Quando todos os documentos podem continuar:
+
+```json
+{
+  "recommended_action": {
+    "can_continue": true,
+    "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
+    "next_step": "Prosseguir para criação das extrações estruturadas JSON."
+  }
+}
 ```
 
-possui uma seção específica de status:
+Quando há documentos exigindo revisão manual:
+
+```json
+{
+  "recommended_action": {
+    "can_continue": false,
+    "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
+    "next_step": "Revisar manualmente os documentos marcados antes de continuar."
+  }
+}
+```
+
+O relatório Markdown também possui:
 
 ```markdown
+## Ação recomendada
 ## Status dos documentos
-
 ### Aptos a continuar
-
 ### Exigem revisão
-```
-
-e uma seção detalhada:
-
-```markdown
 ## Documentos que exigem revisão manual
 ```
 
@@ -163,59 +151,3 @@ Essas seções permitem separar rapidamente documentos classificados com confian
 | Plano de saúde | `plano_saude` | `pagamentos[]` |
 | Bem imóvel | `bem_imovel` | `bens[]` |
 | Bem veículo | `bem_veiculo` | `bens[]` |
-
----
-
-## Arquitetura
-
-### Camada probabilística futura
-
-- OCR;
-- leitura de documentos;
-- classificação semântica;
-- extração de campos;
-- baixa confiança.
-
-### Camada determinística atual
-
-- classificação simples por palavras-chave;
-- simulação local de decisão;
-- normalização;
-- validação;
-- geração de JSON canônico;
-- consolidação;
-- relatório.
-
----
-
-## JSON canônico
-
-```json
-{
-  "$schema": "irpf-2026-v1",
-  "exercicio": 2026,
-  "ano_calendario": 2025,
-  "tipo_declaracao": "AJUSTE_ANUAL",
-  "modelo": "AUTO",
-  "declarante": {},
-  "rendimentos": {
-    "tributaveis_pj": []
-  },
-  "pagamentos": [],
-  "bens": [],
-  "dividas": [],
-  "avisos": [],
-  "requires_review": []
-}
-```
-
----
-
-## Próximos passos
-
-1. Melhorar o simulador local em lote.
-2. Melhorar o simulador local individual.
-3. Melhorar o classificador simples.
-4. Preparar OCR real.
-5. Criar leitura PDF/imagem.
-6. Integrar ao Agno.
