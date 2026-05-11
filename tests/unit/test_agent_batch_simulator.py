@@ -73,9 +73,34 @@ def test_agent_batch_simulator_cli_outputs():
         assert "bem_veiculo" in report_text
 
 
+def test_agent_batch_simulator_json_cli():
+    input_dir = PROJECT_ROOT / "tests" / "fixtures" / "raw_text"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/agent_batch_simulator.py",
+            str(input_dir),
+            "--json",
+        ],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+
+    data = json.loads(result.stdout)
+
+    assert data["total_files"] == 5
+    assert len(data["decisions"]) == 5
+    assert data["summary"]["should_continue_count"] == 5
+
+
 def run_tests():
     test_agent_batch_simulator_build_response()
     test_agent_batch_simulator_cli_outputs()
+    test_agent_batch_simulator_json_cli()
     print("test_agent_batch_simulator.py: todos os testes passaram.")
 
 

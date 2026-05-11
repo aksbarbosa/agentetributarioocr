@@ -169,32 +169,58 @@ def print_human_summary(batch_response: dict, json_path: str, report_path: str) 
         print(f"- {confidence}: {count}")
 
 
-def parse_args(argv: list[str]) -> tuple[str, str, str]:
+def print_json_response(batch_response: dict) -> None:
+    """
+    Imprime a resposta em lote em JSON no terminal.
+    """
+    print(json.dumps(batch_response, ensure_ascii=False, indent=2))
+
+
+def parse_args(argv: list[str]) -> tuple[str, str, str, bool]:
     """
     Uso:
         python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
-        python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
+        python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
+        python3 tools/agent_batch_simulator.py tests/fixtures/raw_text output.json output.report.md
+        python3 tools/agent_batch_simulator.py tests/fixtures/raw_text output.json output.report.md --json
     """
-    if len(argv) not in {2, 4}:
+    if len(argv) < 2:
         print("Uso:")
         print("python3 tools/agent_batch_simulator.py pasta_de_textos")
+        print("python3 tools/agent_batch_simulator.py pasta_de_textos --json")
         print("python3 tools/agent_batch_simulator.py pasta_de_textos output.json output.report.md")
+        print("python3 tools/agent_batch_simulator.py pasta_de_textos output.json output.report.md --json")
         sys.exit(1)
 
     input_dir = argv[1]
+    args = argv[2:]
 
-    if len(argv) == 4:
-        output_json = argv[2]
-        output_report = argv[3]
-    else:
-        output_json = "outputs/agent-decisions.json"
-        output_report = "outputs/agent-decisions.report.md"
+    output_json = "outputs/agent-decisions.json"
+    output_report = "outputs/agent-decisions.report.md"
+    print_json = False
 
-    return input_dir, output_json, output_report
+    if "--json" in args:
+        print_json = True
+        args = [arg for arg in args if arg != "--json"]
+
+    if len(args) == 0:
+        return input_dir, output_json, output_report, print_json
+
+    if len(args) == 2:
+        output_json = args[0]
+        output_report = args[1]
+        return input_dir, output_json, output_report, print_json
+
+    print("Uso:")
+    print("python3 tools/agent_batch_simulator.py pasta_de_textos")
+    print("python3 tools/agent_batch_simulator.py pasta_de_textos --json")
+    print("python3 tools/agent_batch_simulator.py pasta_de_textos output.json output.report.md")
+    print("python3 tools/agent_batch_simulator.py pasta_de_textos output.json output.report.md --json")
+    sys.exit(1)
 
 
 def main() -> None:
-    input_dir, output_json, output_report = parse_args(sys.argv)
+    input_dir, output_json, output_report, should_print_json = parse_args(sys.argv)
 
     batch_response = build_batch_response(input_dir)
     report = generate_markdown_report(batch_response)
@@ -202,7 +228,10 @@ def main() -> None:
     save_json(batch_response, output_json)
     save_report(report, output_report)
 
-    print_human_summary(batch_response, output_json, output_report)
+    if should_print_json:
+        print_json_response(batch_response)
+    else:
+        print_human_summary(batch_response, output_json, output_report)
 
 
 if __name__ == "__main__":
