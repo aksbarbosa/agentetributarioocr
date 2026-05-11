@@ -8,30 +8,11 @@ Registro das principais etapas implementadas no projeto.
 
 ### Estrutura base
 
-Criada a estrutura inicial do projeto:
-
-```text
-irpf_ocr_dec/
-├── config/
-├── inputs/
-├── outputs/
-├── skill/
-├── tests/
-└── tools/
-```
+Criada a estrutura inicial do projeto com pastas `config/`, `inputs/`, `outputs/`, `skill/`, `tests/` e `tools/`.
 
 ### Objetivo definido
 
-O projeto foi definido como uma base experimental para:
-
-- receber documentos, textos extraídos ou extrações estruturadas;
-- classificar documentos;
-- simular decisão inicial de agente;
-- normalizar dados;
-- gerar JSON canônico;
-- validar inconsistências;
-- gerar relatório humano;
-- futuramente gerar arquivo `.DEC` experimental.
+O projeto foi definido como base experimental para classificar documentos, simular decisão de agente, normalizar dados, gerar JSON canônico, validar inconsistências, gerar relatório humano e futuramente gerar `.DEC`.
 
 ---
 
@@ -45,12 +26,13 @@ Implementado:
 tools/normalize.py
 ```
 
-### Classificação simples de documentos
+### Classificação simples
 
 Implementado:
 
 ```text
 tools/classify_document.py
+tests/unit/test_classify_document.py
 ```
 
 Tipos reconhecidos:
@@ -64,26 +46,13 @@ bem_veiculo
 desconhecido
 ```
 
-Também suporta:
-
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
-
-Teste:
-
-```text
-tests/unit/test_classify_document.py
-```
-
----
-
-### Simulador local de agente individual
+### Simulador local individual
 
 Implementado:
 
 ```text
 tools/agent_simulator.py
+tests/unit/test_agent_simulator.py
 ```
 
 Comandos:
@@ -94,47 +63,29 @@ python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.tx
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
 ```
 
-Teste:
-
-```text
-tests/unit/test_agent_simulator.py
-```
-
----
-
-### Simulador local de agente em lote
+### Simulador local em lote
 
 Implementado:
 
 ```text
 tools/agent_batch_simulator.py
+tests/unit/test_agent_batch_simulator.py
 ```
 
-O simulador em lote recebe uma pasta com arquivos `.txt`, executa a lógica de decisão local para cada documento e gera:
+Gera:
 
 ```text
 outputs/agent-decisions.json
 outputs/agent-decisions.report.md
 ```
 
-Ele produz:
-
-- decisões individuais;
-- resumo por `document_type`;
-- resumo por nível de confiança;
-- contagem de documentos aptos a continuar;
-- contagem de documentos que exigem revisão manual.
-
-Teste:
-
-```text
-tests/unit/test_agent_batch_simulator.py
-```
-
-Comando:
+Suporta:
 
 ```bash
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 ```
 
 ---
@@ -229,20 +180,6 @@ test_agent_batch_simulator.py
 
 ---
 
-## Estado atual
-
-O projeto já possui:
-
-- versão local funcional com extrações simuladas;
-- classificador simples;
-- simulador local individual;
-- simulador local em lote;
-- pipeline determinístico;
-- relatório humano;
-- testes automatizados.
-
----
-
 ## Ainda não implementado
 
 - OCR real;
@@ -254,16 +191,3 @@ O projeto já possui:
 - suporte a dependentes;
 - suporte a investimentos;
 - cálculo completo de imposto.
-
----
-
-## Próximas etapas planejadas
-
-1. Melhorar o simulador local em lote.
-2. Melhorar o simulador local individual.
-3. Melhorar o classificador simples.
-4. Preparar OCR real.
-5. Criar leitor de PDF/imagem.
-6. Expandir schemas.
-7. Iniciar estudo do builder `.DEC`.
-8. Criar parser reverso `.DEC`.

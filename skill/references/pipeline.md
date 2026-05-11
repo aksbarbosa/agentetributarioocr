@@ -2,22 +2,15 @@
 
 Este arquivo documenta o fluxo atual do projeto.
 
-O pipeline atual trabalha com:
-
-- extrações simuladas em JSON;
-- textos brutos simulados para classificação;
-- classificador simples por palavras-chave;
-- simulador local de agente individual;
-- simulador local de agente em lote;
-- validação e consolidação determinística.
+O pipeline atual trabalha com extrações simuladas em JSON, textos brutos simulados, classificador simples, simulador local individual, simulador local em lote e validação determinística.
 
 Ainda não há OCR real, leitura direta de PDF/imagem ou geração `.DEC`.
 
 ---
 
-## Fluxo geral atual
+## Fluxo geral
 
-### 1. Classificação simples
+### Classificação simples
 
 ```text
 texto bruto simulado
@@ -27,7 +20,7 @@ tools/classify_document.py
 document_type provável
 ```
 
-### 2. Simulação local de agente individual
+### Simulação individual
 
 ```text
 texto bruto simulado
@@ -43,7 +36,7 @@ schema recomendado
 próximo passo sugerido
 ```
 
-### 3. Simulação local de agente em lote
+### Simulação em lote
 
 ```text
 pasta com textos brutos
@@ -57,7 +50,7 @@ outputs/agent-decisions.json
 outputs/agent-decisions.report.md
 ```
 
-### 4. Pipeline principal
+### Pipeline principal
 
 ```text
 config/project_config.json
@@ -74,44 +67,25 @@ conversão para JSON canônico parcial
     ↓
 consolidação
     ↓
-detecção simples de duplicidades
-    ↓
 validação canônica
     ↓
-geração do relatório humano
-    ↓
-outputs/
+relatório humano
 ```
 
 ---
 
-## Comandos úteis
-
-Classificador:
+## Comandos
 
 ```bash
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-```
-
-Simulador individual:
-
-```bash
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
 python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
-```
-
-Simulador em lote:
-
-```bash
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
-```
-
-Pipeline principal:
-
-```bash
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/run_project.py
 python3 tools/dev_check.py
 ```
@@ -144,15 +118,6 @@ outputs/agent-decisions.report.md
 
 ## Estado atual
 
-O projeto já possui:
-
-```text
-classificador individual
-simulador individual
-simulador em lote
-pipeline canônico
-relatório humano
-testes automatizados
-```
+O projeto já possui classificador individual, simulador individual, simulador em lote, pipeline canônico, relatório humano e testes automatizados.
 
 Ainda não há OCR real, leitura direta de PDF/imagem, classificação robusta nem geração `.DEC`.
