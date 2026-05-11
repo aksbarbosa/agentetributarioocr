@@ -19,6 +19,7 @@ TEST_FILES = [
     "tests/unit/test_classify_document.py",
     "tests/unit/test_agent_simulator.py",
     "tests/unit/test_agent_batch_simulator.py",
+    "tests/unit/test_preflight_documents.py",
 ]
 
 
