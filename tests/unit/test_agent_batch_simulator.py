@@ -35,6 +35,10 @@ def test_agent_batch_simulator_build_response():
     assert response["summary"]["should_continue_count"] == 5
     assert response["summary"]["requires_manual_review_count"] == 0
 
+    assert response["recommended_action"]["can_continue"] is True
+    assert "Todos os 5 documento(s)" in response["recommended_action"]["message"]
+    assert response["recommended_action"]["next_step"] == "Prosseguir para criação das extrações estruturadas JSON."
+
 
 def test_agent_batch_simulator_cli_outputs():
     input_dir = PROJECT_ROOT / "tests" / "fixtures" / "raw_text"
@@ -67,6 +71,7 @@ def test_agent_batch_simulator_cli_outputs():
         assert len(data["decisions"]) == 5
         assert data["summary"]["should_continue_count"] == 5
         assert data["summary"]["requires_manual_review_count"] == 0
+        assert data["recommended_action"]["can_continue"] is True
 
         report_text = output_report.read_text(encoding="utf-8")
 
@@ -76,6 +81,12 @@ def test_agent_batch_simulator_cli_outputs():
         assert "## Resumo geral" in report_text
         assert "Documentos aptos a continuar: 5" in report_text
         assert "Documentos que exigem revisão manual: 0" in report_text
+        assert "## Ação recomendada" in report_text
+        assert "Pode continuar: `True`" in report_text
+        assert "Prosseguir para criação das extrações estruturadas JSON." in report_text
+        assert "## Status dos documentos" in report_text
+        assert "### Aptos a continuar" in report_text
+        assert "### Exigem revisão" in report_text
         assert "## Documentos que exigem revisão manual" in report_text
         assert "Nenhum documento exige revisão manual." in report_text
 
@@ -103,6 +114,8 @@ def test_agent_batch_simulator_json_cli():
     assert len(data["decisions"]) == 5
     assert data["summary"]["should_continue_count"] == 5
     assert data["summary"]["requires_manual_review_count"] == 0
+    assert data["recommended_action"]["can_continue"] is True
+    assert "Todos os 5 documento(s)" in data["recommended_action"]["message"]
 
 
 def test_agent_batch_simulator_custom_paths_json_cli():
@@ -135,6 +148,7 @@ def test_agent_batch_simulator_custom_paths_json_cli():
         assert stdout_data["total_files"] == 5
         assert stdout_data["summary"]["should_continue_count"] == 5
         assert stdout_data["summary"]["requires_manual_review_count"] == 0
+        assert stdout_data["recommended_action"]["can_continue"] is True
 
         with output_json.open("r", encoding="utf-8") as file:
             saved_data = json.load(file)
@@ -143,6 +157,7 @@ def test_agent_batch_simulator_custom_paths_json_cli():
         assert len(saved_data["decisions"]) == 5
         assert saved_data["summary"]["should_continue_count"] == 5
         assert saved_data["summary"]["requires_manual_review_count"] == 0
+        assert saved_data["recommended_action"]["can_continue"] is True
 
 
 def test_agent_batch_simulator_with_unknown_document():
@@ -154,6 +169,10 @@ def test_agent_batch_simulator_with_unknown_document():
     assert len(response["decisions"]) == 6
     assert response["summary"]["should_continue_count"] == 5
     assert response["summary"]["requires_manual_review_count"] == 1
+
+    assert response["recommended_action"]["can_continue"] is False
+    assert "Há 1 documento(s) que exigem revisão manual" in response["recommended_action"]["message"]
+    assert response["recommended_action"]["next_step"] == "Revisar manualmente os documentos marcados antes de continuar."
 
     unknown_items = [
         item for item in response["decisions"]
@@ -195,8 +214,19 @@ def test_agent_batch_simulator_with_unknown_document_report():
         assert data["total_files"] == 6
         assert data["summary"]["should_continue_count"] == 5
         assert data["summary"]["requires_manual_review_count"] == 1
+        assert data["recommended_action"]["can_continue"] is False
 
         report_text = output_report.read_text(encoding="utf-8")
+
+        assert "## Ação recomendada" in report_text
+        assert "Pode continuar: `False`" in report_text
+        assert "Há 1 documento(s) que exigem revisão manual" in report_text
+        assert "Revisar manualmente os documentos marcados antes de continuar." in report_text
+
+        assert "## Status dos documentos" in report_text
+        assert "### Aptos a continuar" in report_text
+        assert "### Exigem revisão" in report_text
+        assert "`documento_desconhecido.txt` — `desconhecido` — `low`" in report_text
 
         assert "## Documentos que exigem revisão manual" in report_text
         assert "documento_desconhecido.txt" in report_text
