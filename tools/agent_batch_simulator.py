@@ -122,6 +122,53 @@ def generate_markdown_report(batch_response: dict) -> str:
         lines.append("Nenhuma classificação disponível.")
 
     lines.append("")
+    lines.append("## Status dos documentos")
+    lines.append("")
+
+    ready_items = [
+        item for item in batch_response["decisions"]
+        if item["decision"]["should_continue"]
+    ]
+
+    review_items = [
+        item for item in batch_response["decisions"]
+        if not item["decision"]["should_continue"]
+    ]
+
+    lines.append("### Aptos a continuar")
+    lines.append("")
+
+    if ready_items:
+        for item in ready_items:
+            classification = item["classification"]
+            file_name = Path(item["input_path"]).name
+
+            lines.append(
+                f"- `{file_name}` — "
+                f"`{classification['document_type']}` — "
+                f"`{classification['confidence']}`"
+            )
+    else:
+        lines.append("Nenhum documento apto a continuar.")
+
+    lines.append("")
+    lines.append("### Exigem revisão")
+    lines.append("")
+
+    if review_items:
+        for item in review_items:
+            classification = item["classification"]
+            file_name = Path(item["input_path"]).name
+
+            lines.append(
+                f"- `{file_name}` — "
+                f"`{classification['document_type']}` — "
+                f"`{classification['confidence']}`"
+            )
+    else:
+        lines.append("Nenhum documento exige revisão.")
+
+    lines.append("")
     lines.append("## Documentos que exigem revisão manual")
     lines.append("")
 
@@ -186,6 +233,11 @@ def print_human_summary(batch_response: dict, json_path: str, report_path: str) 
     print(f"Arquivos analisados: {batch_response['total_files']}")
     print(f"JSON de decisões: {json_path}")
     print(f"Relatório de decisões: {report_path}")
+    print("")
+
+    print("Resumo geral:")
+    print(f"- Documentos aptos a continuar: {batch_response['summary']['should_continue_count']}")
+    print(f"- Documentos que exigem revisão manual: {batch_response['summary']['requires_manual_review_count']}")
     print("")
 
     print("Resumo por tipo:")
