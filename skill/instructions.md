@@ -77,11 +77,23 @@ python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
 ```
 
 Quando usado com `--json`, o simulador em lote imprime a decisão consolidada no terminal. Esse modo deve ser preferido quando outro processo ou agente precisar consumir a resposta de forma estruturada.
 
 O relatório em lote é uma pré-triagem, não uma extração fiscal definitiva.
+
+O agente deve observar especialmente as seções:
+
+```markdown
+## Status dos documentos
+### Aptos a continuar
+### Exigem revisão
+## Documentos que exigem revisão manual
+```
+
+Quando houver itens em `### Exigem revisão`, o agente deve pedir revisão humana ou classificação manual antes de avançar.
 
 ---
 

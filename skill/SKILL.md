@@ -32,7 +32,6 @@ Atualmente o projeto possui:
 
 Ainda não possui OCR real, leitura direta de PDF/imagem, integração final com Agno nem geração `.DEC`.
 
-
 ---
 
 ## Fluxos da skill
@@ -115,6 +114,7 @@ python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
 ```
 
 Pipeline:
@@ -126,7 +126,35 @@ python3 tools/dev_check.py
 
 ---
 
-## Documentos suportados
+## Relatório do simulador em lote
+
+O relatório Markdown gerado por:
+
+```bash
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+```
+
+possui uma seção específica de status:
+
+```markdown
+## Status dos documentos
+
+### Aptos a continuar
+
+### Exigem revisão
+```
+
+e uma seção detalhada:
+
+```markdown
+## Documentos que exigem revisão manual
+```
+
+Essas seções permitem separar rapidamente documentos classificados com confiança suficiente daqueles que exigem revisão humana.
+
+---
+
+## Documentos suportados atualmente
 
 | Documento | `document_type` | Destino |
 |---|---|---|

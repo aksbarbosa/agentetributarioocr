@@ -86,9 +86,29 @@ python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
 python3 tools/run_project.py
 python3 tools/dev_check.py
 ```
+
+---
+
+## Relatório do simulador em lote
+
+O relatório em lote contém:
+
+```markdown
+## Resumo geral
+## Resumo por tipo de documento
+## Resumo por confiança
+## Status dos documentos
+### Aptos a continuar
+### Exigem revisão
+## Documentos que exigem revisão manual
+## Decisões
+```
+
+A seção `Status dos documentos` separa rapidamente documentos aptos a continuar daqueles que precisam de revisão humana.
 
 ---
 

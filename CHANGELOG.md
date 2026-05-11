@@ -86,7 +86,25 @@ python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
+python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
 ```
+
+O relatório do simulador em lote passou a destacar:
+
+```markdown
+## Status dos documentos
+### Aptos a continuar
+### Exigem revisão
+## Documentos que exigem revisão manual
+```
+
+Também foi adicionada fixture com documento desconhecido:
+
+```text
+tests/fixtures/raw_text_with_unknown/documento_desconhecido.txt
+```
+
+Essa fixture testa o cenário em que o lote contém um documento que exige revisão manual.
 
 ---
 

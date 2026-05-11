@@ -165,6 +165,11 @@ irpf_ocr_dec/
 │   ├── SKILL.md
 │   ├── instructions.md
 │   ├── references/
+│   │   ├── codigos_bens.md
+│   │   ├── codigos_pagamentos.md
+│   │   ├── json_canonico.md
+│   │   ├── pipeline.md
+│   │   └── tipos_documentos.md
 │   └── schemas/
 ├── tests/
 │   ├── fixtures/
@@ -513,9 +518,21 @@ O simulador em lote produz:
 - contagem de documentos que podem continuar;
 - contagem de documentos que exigem revisão manual.
 
-Quando usado com a fixture `tests/fixtures/raw_text_with_unknown/`, o relatório deve destacar o documento desconhecido na seção:
+O relatório Markdown do simulador em lote possui as seções:
 
 ```markdown
+## Resumo geral
+## Status dos documentos
+### Aptos a continuar
+### Exigem revisão
+## Documentos que exigem revisão manual
+## Decisões
+```
+
+Quando usado com a fixture `tests/fixtures/raw_text_with_unknown/`, o relatório deve destacar o documento desconhecido nas seções:
+
+```markdown
+### Exigem revisão
 ## Documentos que exigem revisão manual
 ```
 
