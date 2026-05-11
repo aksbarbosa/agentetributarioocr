@@ -65,12 +65,19 @@ def test_agent_batch_simulator_cli_outputs():
 
         assert data["total_files"] == 5
         assert len(data["decisions"]) == 5
+        assert data["summary"]["should_continue_count"] == 5
+        assert data["summary"]["requires_manual_review_count"] == 0
 
         report_text = output_report.read_text(encoding="utf-8")
 
         assert "# Relatório de simulação local do agente" in report_text
         assert "informe_rendimentos_pj" in report_text
         assert "bem_veiculo" in report_text
+        assert "## Resumo geral" in report_text
+        assert "Documentos aptos a continuar: 5" in report_text
+        assert "Documentos que exigem revisão manual: 0" in report_text
+        assert "## Documentos que exigem revisão manual" in report_text
+        assert "Nenhum documento exige revisão manual." in report_text
 
 
 def test_agent_batch_simulator_json_cli():
@@ -95,12 +102,51 @@ def test_agent_batch_simulator_json_cli():
     assert data["total_files"] == 5
     assert len(data["decisions"]) == 5
     assert data["summary"]["should_continue_count"] == 5
+    assert data["summary"]["requires_manual_review_count"] == 0
+
+
+def test_agent_batch_simulator_custom_paths_json_cli():
+    input_dir = PROJECT_ROOT / "tests" / "fixtures" / "raw_text"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output_json = Path(temp_dir) / "custom-agent-decisions.json"
+        output_report = Path(temp_dir) / "custom-agent-decisions.report.md"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "tools/agent_batch_simulator.py",
+                str(input_dir),
+                str(output_json),
+                str(output_report),
+                "--json",
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert output_json.exists()
+        assert output_report.exists()
+
+        stdout_data = json.loads(result.stdout)
+
+        assert stdout_data["total_files"] == 5
+        assert stdout_data["summary"]["should_continue_count"] == 5
+
+        with output_json.open("r", encoding="utf-8") as file:
+            saved_data = json.load(file)
+
+        assert saved_data["total_files"] == 5
+        assert len(saved_data["decisions"]) == 5
 
 
 def run_tests():
     test_agent_batch_simulator_build_response()
     test_agent_batch_simulator_cli_outputs()
     test_agent_batch_simulator_json_cli()
+    test_agent_batch_simulator_custom_paths_json_cli()
     print("test_agent_batch_simulator.py: todos os testes passaram.")
 
 

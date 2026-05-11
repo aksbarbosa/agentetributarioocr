@@ -96,6 +96,12 @@ def generate_markdown_report(batch_response: dict) -> str:
 
     summary = batch_response["summary"]
 
+    lines.append("## Resumo geral")
+    lines.append("")
+    lines.append(f"- Documentos aptos a continuar: {summary['should_continue_count']}")
+    lines.append(f"- Documentos que exigem revisão manual: {summary['requires_manual_review_count']}")
+    lines.append("")
+
     lines.append("## Resumo por tipo de documento")
     lines.append("")
 
@@ -114,6 +120,29 @@ def generate_markdown_report(batch_response: dict) -> str:
             lines.append(f"- `{confidence}`: {count}")
     else:
         lines.append("Nenhuma classificação disponível.")
+
+    lines.append("")
+    lines.append("## Documentos que exigem revisão manual")
+    lines.append("")
+
+    manual_review_items = [
+        item for item in batch_response["decisions"]
+        if not item["decision"]["should_continue"]
+    ]
+
+    if manual_review_items:
+        for item in manual_review_items:
+            classification = item["classification"]
+            decision = item["decision"]
+
+            lines.append(
+                f"- `{item['input_path']}` — "
+                f"document_type: `{classification['document_type']}` — "
+                f"confidence: `{classification['confidence']}` — "
+                f"próximo passo: {decision['next_step']}"
+            )
+    else:
+        lines.append("Nenhum documento exige revisão manual.")
 
     lines.append("")
     lines.append("## Decisões")
