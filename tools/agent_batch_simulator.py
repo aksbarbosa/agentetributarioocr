@@ -49,6 +49,40 @@ def build_summary(decisions: list[dict]) -> dict:
     }
 
 
+def build_recommended_action(summary: dict) -> dict:
+    """
+    Cria uma recomendação geral para o lote processado.
+    """
+    manual_review_count = summary["requires_manual_review_count"]
+    should_continue_count = summary["should_continue_count"]
+
+    if manual_review_count > 0:
+        return {
+            "can_continue": False,
+            "message": (
+                f"Há {manual_review_count} documento(s) que exigem revisão manual "
+                "antes de avançar para extração estruturada."
+            ),
+            "next_step": "Revisar manualmente os documentos marcados antes de continuar.",
+        }
+
+    if should_continue_count == 0:
+        return {
+            "can_continue": False,
+            "message": "Nenhum documento foi classificado com confiança suficiente para continuar.",
+            "next_step": "Revisar os textos brutos ou melhorar a classificação.",
+        }
+
+    return {
+        "can_continue": True,
+        "message": (
+            f"Todos os {should_continue_count} documento(s) foram classificados "
+            "com confiança suficiente para continuar."
+        ),
+        "next_step": "Prosseguir para criação das extrações estruturadas JSON.",
+    }
+
+
 def build_batch_response(input_dir: str) -> dict:
     """
     Simula decisões de agente para todos os arquivos .txt de uma pasta.
@@ -62,11 +96,13 @@ def build_batch_response(input_dir: str) -> dict:
         decisions.append(response)
 
     summary = build_summary(decisions)
+    recommended_action = build_recommended_action(summary)
 
     return {
         "input_dir": input_dir,
         "total_files": len(files),
         "summary": summary,
+        "recommended_action": recommended_action,
         "decisions": decisions,
     }
 
@@ -95,11 +131,19 @@ def generate_markdown_report(batch_response: dict) -> str:
     lines.append("")
 
     summary = batch_response["summary"]
+    recommended_action = batch_response["recommended_action"]
 
     lines.append("## Resumo geral")
     lines.append("")
     lines.append(f"- Documentos aptos a continuar: {summary['should_continue_count']}")
     lines.append(f"- Documentos que exigem revisão manual: {summary['requires_manual_review_count']}")
+    lines.append("")
+
+    lines.append("## Ação recomendada")
+    lines.append("")
+    lines.append(f"- Pode continuar: `{recommended_action['can_continue']}`")
+    lines.append(f"- Mensagem: {recommended_action['message']}")
+    lines.append(f"- Próximo passo: {recommended_action['next_step']}")
     lines.append("")
 
     lines.append("## Resumo por tipo de documento")
@@ -238,6 +282,14 @@ def print_human_summary(batch_response: dict, json_path: str, report_path: str) 
     print("Resumo geral:")
     print(f"- Documentos aptos a continuar: {batch_response['summary']['should_continue_count']}")
     print(f"- Documentos que exigem revisão manual: {batch_response['summary']['requires_manual_review_count']}")
+    print("")
+
+    recommended_action = batch_response["recommended_action"]
+
+    print("Ação recomendada:")
+    print(f"- Pode continuar: {recommended_action['can_continue']}")
+    print(f"- Mensagem: {recommended_action['message']}")
+    print(f"- Próximo passo: {recommended_action['next_step']}")
     print("")
 
     print("Resumo por tipo:")
