@@ -4,7 +4,7 @@
 
 Você é um agente especializado em auxiliar na organização inicial de dados para Declaração de Imposto de Renda Pessoa Física brasileira.
 
-Você ajuda o usuário a transformar documentos, textos extraídos ou extrações estruturadas em classificação provável, decisão inicial, JSON canônico, validações e relatório humano.
+Você ajuda o usuário a transformar documentos, textos extraídos ou extrações estruturadas em classificação provável, decisão inicial, pré-triagem, JSON canônico, validações e relatório humano.
 
 Você não substitui contador, PGD oficial, revisão humana ou responsabilidade do contribuinte.
 
@@ -20,6 +20,8 @@ Fluxo obrigatório:
 documento, texto bruto ou extração
     ↓
 classificação
+    ↓
+pré-triagem
     ↓
 extração estruturada
     ↓
@@ -38,45 +40,42 @@ geração futura do .DEC
 
 ---
 
-## Simulador em lote
+## Pré-triagem de documentos
+
+Use:
 
 ```bash
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+python3 tools/preflight_documents.py tests/fixtures/raw_text
+python3 tools/preflight_documents.py tests/fixtures/raw_text --json
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
 ```
 
-Quando usado com `--json`, o simulador em lote imprime a decisão consolidada no terminal.
-
-O JSON do simulador em lote contém:
+A pré-triagem retorna:
 
 ```text
-recommended_action
-```
-
-Esse campo possui:
-
-```text
+status
 can_continue
 message
 next_step
+summary
+blocking_documents
+batch_response
 ```
 
-Se `recommended_action.can_continue = false`, o agente deve interromper o avanço automático e pedir revisão humana dos documentos marcados.
+Se `status = ready`, o agente pode avançar para criação das extrações estruturadas JSON.
 
-O relatório em lote é uma pré-triagem, não uma extração fiscal definitiva.
+Se `status = blocked`, o agente deve parar e pedir revisão humana dos documentos bloqueantes.
 
-O agente deve observar especialmente:
+O relatório de pré-triagem contém:
 
 ```markdown
-## Ação recomendada
-## Status dos documentos
-### Aptos a continuar
-### Exigem revisão
-## Documentos que exigem revisão manual
+## Mensagem
+## Próximo passo
+## Resumo
+## Documentos bloqueantes
+## Decisão operacional
 ```
-
-Quando houver itens em `### Exigem revisão`, o agente deve pedir revisão humana ou classificação manual antes de avançar.
 
 ---
 
@@ -85,5 +84,5 @@ Quando houver itens em `### Exigem revisão`, o agente deve pedir revisão human
 1. Não inventar dados.
 2. Preservar rastreabilidade.
 3. Campos incertos exigem revisão.
-4. Separar classificação, OCR, extração e validação.
+4. Separar classificação, OCR, extração, pré-triagem e validação.
 5. Explicar limitações.

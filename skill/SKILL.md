@@ -23,6 +23,7 @@ Atualmente o projeto possui:
 - classificador simples por palavras-chave;
 - simulador local de agente individual;
 - simulador local de agente em lote;
+- pré-triagem de documentos;
 - pipeline determinístico de extrações simuladas;
 - validação canônica;
 - relatório humano;
@@ -76,6 +77,20 @@ outputs/agent-decisions.json
 outputs/agent-decisions.report.md
 ```
 
+### Pré-triagem
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/preflight_documents.py
+    ↓
+status ready ou blocked
+    ↓
+outputs/preflight-documents.json
+    ↓
+outputs/preflight-documents.report.md
+```
+
 ---
 
 ## Comandos
@@ -90,9 +105,12 @@ python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.tx
 
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+
+python3 tools/preflight_documents.py tests/fixtures/raw_text
+python3 tools/preflight_documents.py tests/fixtures/raw_text --json
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
 
 python3 tools/run_project.py
 python3 tools/dev_check.py
@@ -100,45 +118,20 @@ python3 tools/dev_check.py
 
 ---
 
-## Decisão recomendada do simulador em lote
+## Decisão recomendada e pré-triagem
 
 O simulador em lote gera `recommended_action`.
 
-Quando todos os documentos podem continuar:
+A pré-triagem consome essa decisão e produz um status operacional:
 
-```json
-{
-  "recommended_action": {
-    "can_continue": true,
-    "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
-    "next_step": "Prosseguir para criação das extrações estruturadas JSON."
-  }
-}
+```text
+ready
+blocked
 ```
 
-Quando há documentos exigindo revisão manual:
+Quando `status = ready`, o agente pode avançar para criação de extrações estruturadas JSON.
 
-```json
-{
-  "recommended_action": {
-    "can_continue": false,
-    "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
-    "next_step": "Revisar manualmente os documentos marcados antes de continuar."
-  }
-}
-```
-
-O relatório Markdown também possui:
-
-```markdown
-## Ação recomendada
-## Status dos documentos
-### Aptos a continuar
-### Exigem revisão
-## Documentos que exigem revisão manual
-```
-
-Essas seções permitem separar rapidamente documentos classificados com confiança suficiente daqueles que exigem revisão humana.
+Quando `status = blocked`, o agente deve interromper o avanço automático e solicitar revisão humana dos documentos bloqueantes.
 
 ---
 

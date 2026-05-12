@@ -19,6 +19,8 @@ OCR ou texto extraído
     ↓
 classificação
     ↓
+pré-triagem
+    ↓
 extração estruturada
     ↓
 JSON canônico
@@ -43,10 +45,11 @@ Atualmente ele possui:
 1. classificador simples de documentos;
 2. simulador local de agente individual;
 3. simulador local de agente em lote;
-4. pipeline principal para extrações simuladas em JSON;
-5. validação canônica;
-6. relatório humano;
-7. testes automatizados.
+4. ferramenta de pré-triagem de documentos;
+5. pipeline principal para extrações simuladas em JSON;
+6. validação canônica;
+7. relatório humano;
+8. testes automatizados.
 
 ---
 
@@ -94,6 +97,24 @@ recommended_action
 outputs/agent-decisions.json
     ↓
 outputs/agent-decisions.report.md
+```
+
+### Pré-triagem de documentos
+
+```text
+tests/fixtures/raw_text/
+    ↓
+tools/preflight_documents.py
+    ↓
+agent_batch_simulator.py
+    ↓
+summary + recommended_action + decisions
+    ↓
+status ready ou blocked
+    ↓
+outputs/preflight-documents.json
+    ↓
+outputs/preflight-documents.report.md
 ```
 
 ### Pipeline principal
@@ -152,7 +173,7 @@ Contém os mesmos textos conhecidos mais:
 documento_desconhecido.txt
 ```
 
-Essa pasta testa o comportamento do simulador em lote quando há um documento que exige revisão manual.
+Essa pasta testa o comportamento do simulador em lote e da pré-triagem quando há um documento que exige revisão manual.
 
 ---
 
@@ -196,99 +217,83 @@ Simular agente em lote:
 ```bash
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+```
+
+Rodar pré-triagem com todos os documentos conhecidos:
+
+```bash
+python3 tools/preflight_documents.py tests/fixtures/raw_text
+```
+
+Rodar pré-triagem com documento desconhecido:
+
+```bash
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true
+```
+
+Rodar pré-triagem com JSON no terminal:
+
+```bash
+python3 tools/preflight_documents.py tests/fixtures/raw_text --json
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
 ```
 
 ---
 
-## Simulador local de agente em lote
+## Pré-triagem de documentos
 
 Arquivo principal:
 
 ```text
-tools/agent_batch_simulator.py
+tools/preflight_documents.py
 ```
 
-Ele recebe uma pasta com arquivos `.txt`, executa o simulador local para cada texto e gera:
+A pré-triagem usa o simulador em lote para decidir se o fluxo pode avançar.
+
+Ela gera:
 
 ```text
-outputs/agent-decisions.json
-outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
 ```
 
-O JSON do simulador em lote contém:
-
-```text
-input_dir
-total_files
-summary
-recommended_action
-decisions
-```
-
-A seção `recommended_action` informa se o lote pode avançar automaticamente ou se precisa de revisão manual.
-
-Quando todos os documentos estão aptos:
+Formato resumido do JSON:
 
 ```json
 {
-  "recommended_action": {
-    "can_continue": true,
-    "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
-    "next_step": "Prosseguir para criação das extrações estruturadas JSON."
-  }
+  "input_dir": "tests/fixtures/raw_text_with_unknown",
+  "status": "blocked",
+  "can_continue": false,
+  "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
+  "next_step": "Revisar manualmente os documentos marcados antes de continuar.",
+  "summary": {},
+  "blocking_documents": [],
+  "batch_response": {}
 }
 ```
 
-Quando há documentos que exigem revisão:
+Status possíveis:
 
-```json
-{
-  "recommended_action": {
-    "can_continue": false,
-    "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
-    "next_step": "Revisar manualmente os documentos marcados antes de continuar."
-  }
-}
+```text
+ready
+blocked
 ```
 
-O relatório Markdown do simulador em lote possui:
+Quando `status = ready`, o fluxo pode avançar para criação das extrações estruturadas JSON.
+
+Quando `status = blocked`, o fluxo deve parar até revisão humana ou classificação manual dos documentos bloqueantes.
+
+O relatório Markdown da pré-triagem possui:
 
 ```markdown
-## Resumo geral
-## Ação recomendada
-## Status dos documentos
-### Aptos a continuar
-### Exigem revisão
-## Documentos que exigem revisão manual
-## Decisões
-```
+# Relatório de pré-triagem de documentos
 
----
-
-## JSON canônico
-
-Formato resumido:
-
-```json
-{
-  "$schema": "irpf-2026-v1",
-  "exercicio": 2026,
-  "ano_calendario": 2025,
-  "tipo_declaracao": "AJUSTE_ANUAL",
-  "modelo": "AUTO",
-  "declarante": {},
-  "rendimentos": {
-    "tributaveis_pj": []
-  },
-  "pagamentos": [],
-  "bens": [],
-  "dividas": [],
-  "avisos": [],
-  "requires_review": []
-}
+## Mensagem
+## Próximo passo
+## Resumo
+## Documentos bloqueantes
+## Decisão operacional
 ```
 
 ---

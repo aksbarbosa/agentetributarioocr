@@ -2,7 +2,7 @@
 
 Este arquivo documenta o fluxo atual do projeto.
 
-O pipeline atual trabalha com extrações simuladas em JSON, textos brutos simulados, classificador simples, simulador local individual, simulador local em lote e validação determinística.
+O pipeline atual trabalha com extrações simuladas em JSON, textos brutos simulados, classificador simples, simulador local individual, simulador local em lote, pré-triagem e validação determinística.
 
 Ainda não há OCR real, leitura direta de PDF/imagem ou geração `.DEC`.
 
@@ -52,6 +52,44 @@ outputs/agent-decisions.json
 outputs/agent-decisions.report.md
 ```
 
+### Pré-triagem
+
+```text
+pasta com textos brutos
+    ↓
+tools/preflight_documents.py
+    ↓
+agent_batch_simulator.py
+    ↓
+status ready ou blocked
+    ↓
+outputs/preflight-documents.json
+    ↓
+outputs/preflight-documents.report.md
+```
+
+### Pipeline principal
+
+```text
+config/project_config.json
+    ↓
+tools/run_project.py
+    ↓
+validação da configuração
+    ↓
+inputs/extracted/*.json
+    ↓
+validação das extrações
+    ↓
+conversão para JSON canônico parcial
+    ↓
+consolidação
+    ↓
+validação canônica
+    ↓
+relatório humano
+```
+
 ---
 
 ## Comandos
@@ -66,9 +104,12 @@ python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.tx
 
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text outputs/agent-decisions.json outputs/agent-decisions.report.md --json
 python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
+
+python3 tools/preflight_documents.py tests/fixtures/raw_text
+python3 tools/preflight_documents.py tests/fixtures/raw_text --json
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true
+python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
 
 python3 tools/run_project.py
 python3 tools/dev_check.py
@@ -76,48 +117,29 @@ python3 tools/dev_check.py
 
 ---
 
-## Decisão recomendada do simulador em lote
-
-O JSON de saída do simulador em lote contém:
+## Saídas da pré-triagem
 
 ```text
-recommended_action
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
 ```
 
-Formato quando pode continuar:
+O JSON contém:
 
-```json
-{
-  "can_continue": true,
-  "message": "Todos os 5 documento(s) foram classificados com confiança suficiente para continuar.",
-  "next_step": "Prosseguir para criação das extrações estruturadas JSON."
-}
+```text
+input_dir
+status
+can_continue
+message
+next_step
+summary
+blocking_documents
+batch_response
 ```
 
-Formato quando exige revisão:
+Status possíveis:
 
-```json
-{
-  "can_continue": false,
-  "message": "Há 1 documento(s) que exigem revisão manual antes de avançar para extração estruturada.",
-  "next_step": "Revisar manualmente os documentos marcados antes de continuar."
-}
-```
-
----
-
-## Relatório do simulador em lote
-
-O relatório em lote contém:
-
-```markdown
-## Resumo geral
-## Ação recomendada
-## Resumo por tipo de documento
-## Resumo por confiança
-## Status dos documentos
-### Aptos a continuar
-### Exigem revisão
-## Documentos que exigem revisão manual
-## Decisões
+```text
+ready
+blocked
 ```
