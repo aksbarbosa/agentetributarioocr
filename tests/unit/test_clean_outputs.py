@@ -1,6 +1,6 @@
 import sys
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -8,47 +8,84 @@ TOOLS_DIR = PROJECT_ROOT / "tools"
 
 sys.path.insert(0, str(TOOLS_DIR))
 
-import clean_outputs
+from clean_outputs import OUTPUT_FILES, clean_outputs, remove_file
 
 
-def test_clean_outputs_removes_known_files():
+def test_remove_file_existing_file():
     with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        outputs_dir = temp_path / "outputs"
-        outputs_dir.mkdir()
+        path = Path(temp_dir) / "arquivo.txt"
+        path.write_text("conteudo", encoding="utf-8")
 
-        json_file = outputs_dir / "irpf-consolidado.json"
-        report_file = outputs_dir / "irpf-consolidado.report.md"
-        other_file = outputs_dir / "nao_remover.txt"
+        removed = remove_file(str(path))
 
-        json_file.write_text("{}", encoding="utf-8")
-        report_file.write_text("# relatório", encoding="utf-8")
-        other_file.write_text("preservar", encoding="utf-8")
+        assert removed is True
+        assert not path.exists()
 
-        original_outputs_dir = clean_outputs.OUTPUTS_DIR
 
-        try:
-            clean_outputs.OUTPUTS_DIR = outputs_dir
+def test_remove_file_missing_file():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        path = Path(temp_dir) / "arquivo-inexistente.txt"
 
-            removed = clean_outputs.clean_outputs()
+        removed = remove_file(str(path))
 
-            removed_names = sorted(path.name for path in removed)
+        assert removed is False
 
-            assert removed_names == [
-                "irpf-consolidado.json",
-                "irpf-consolidado.report.md",
-            ]
 
-            assert not json_file.exists()
-            assert not report_file.exists()
-            assert other_file.exists()
+def test_remove_file_directory_is_not_removed():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        path = Path(temp_dir) / "pasta"
+        path.mkdir()
 
-        finally:
-            clean_outputs.OUTPUTS_DIR = original_outputs_dir
+        removed = remove_file(str(path))
+
+        assert removed is False
+        assert path.exists()
+        assert path.is_dir()
+
+
+def test_output_files_contains_known_outputs():
+    expected_outputs = [
+        "outputs/irpf-consolidado.json",
+        "outputs/irpf-consolidado.report.md",
+        "outputs/agent-decision.json",
+        "outputs/agent-decisions.json",
+        "outputs/agent-decisions.report.md",
+        "outputs/preflight-documents.json",
+        "outputs/preflight-documents.report.md",
+    ]
+
+    for output_file in expected_outputs:
+        assert output_file in OUTPUT_FILES
+
+
+def test_clean_outputs_removes_known_outputs_from_project_root():
+    created_files = []
+
+    try:
+        for output_file in OUTPUT_FILES:
+            path = PROJECT_ROOT / output_file
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("arquivo temporario de teste", encoding="utf-8")
+            created_files.append(path)
+
+        removed_files = clean_outputs()
+
+        for output_file in OUTPUT_FILES:
+            assert output_file in removed_files
+            assert not (PROJECT_ROOT / output_file).exists()
+
+    finally:
+        for path in created_files:
+            if path.exists() and path.is_file():
+                path.unlink()
 
 
 def run_tests():
-    test_clean_outputs_removes_known_files()
+    test_remove_file_existing_file()
+    test_remove_file_missing_file()
+    test_remove_file_directory_is_not_removed()
+    test_output_files_contains_known_outputs()
+    test_clean_outputs_removes_known_outputs_from_project_root()
     print("test_clean_outputs.py: todos os testes passaram.")
 
 

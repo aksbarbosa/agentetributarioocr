@@ -1,32 +1,45 @@
 from pathlib import Path
 
 
-OUTPUTS_DIR = Path("outputs")
-
-
-FILES_TO_REMOVE = [
-    "irpf-consolidado.json",
-    "irpf-consolidado.report.md",
+OUTPUT_FILES = [
+    "outputs/irpf-consolidado.json",
+    "outputs/irpf-consolidado.report.md",
+    "outputs/agent-decision.json",
+    "outputs/agent-decisions.json",
+    "outputs/agent-decisions.report.md",
+    "outputs/preflight-documents.json",
+    "outputs/preflight-documents.report.md",
 ]
 
 
-def clean_outputs() -> list[Path]:
+def remove_file(path_str: str) -> bool:
     """
-    Remove arquivos gerados conhecidos dentro da pasta outputs/.
+    Remove um arquivo, se existir.
 
-    Não remove a pasta outputs/.
-    Não remove arquivos fora de outputs/.
+    Retorna True se removeu.
+    Retorna False se o arquivo não existia.
+    """
+    path = Path(path_str)
+
+    if not path.exists():
+        return False
+
+    if path.is_file():
+        path.unlink()
+        return True
+
+    return False
+
+
+def clean_outputs() -> list[str]:
+    """
+    Remove os outputs conhecidos gerados pelo projeto.
     """
     removed_files = []
 
-    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-
-    for filename in FILES_TO_REMOVE:
-        file_path = OUTPUTS_DIR / filename
-
-        if file_path.exists():
-            file_path.unlink()
-            removed_files.append(file_path)
+    for output_file in OUTPUT_FILES:
+        if remove_file(output_file):
+            removed_files.append(output_file)
 
     return removed_files
 
@@ -34,14 +47,12 @@ def clean_outputs() -> list[Path]:
 def main() -> None:
     removed_files = clean_outputs()
 
-    if not removed_files:
-        print("Nenhum arquivo de output para remover.")
-        return
-
-    print("Arquivos removidos:")
-
-    for file_path in removed_files:
-        print(f"- {file_path}")
+    if removed_files:
+        print("Arquivos removidos:")
+        for file_path in removed_files:
+            print(f"- {file_path}")
+    else:
+        print("Nenhum output conhecido para remover.")
 
 
 if __name__ == "__main__":
