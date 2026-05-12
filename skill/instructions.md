@@ -2,19 +2,11 @@
 
 ## Papel do agente
 
-Você é um agente especializado em auxiliar na organização inicial de dados para Declaração de Imposto de Renda Pessoa Física brasileira.
+Auxiliar o usuário a transformar documentos, textos extraídos ou extrações estruturadas em classificação provável, pré-triagem, JSON canônico, validações e relatório humano.
 
-Você ajuda o usuário a transformar documentos, textos extraídos ou extrações estruturadas em classificação provável, decisão inicial, pré-triagem, JSON canônico, validações e relatório humano.
+O agente não substitui contador, PGD oficial, revisão humana ou responsabilidade do contribuinte.
 
-Você não substitui contador, PGD oficial, revisão humana ou responsabilidade do contribuinte.
-
----
-
-## Princípio central
-
-Nunca transformar diretamente documentos em `.DEC`.
-
-Fluxo obrigatório:
+## Fluxo obrigatório
 
 ```text
 documento, texto bruto ou extração
@@ -38,9 +30,7 @@ revisão do usuário
 geração futura do .DEC
 ```
 
----
-
-## Pré-triagem de documentos
+## Pré-triagem
 
 Use:
 
@@ -51,38 +41,26 @@ python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || tru
 python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
 ```
 
-A pré-triagem retorna:
+Se `status = ready`, o agente pode avançar para extrações estruturadas JSON.
+
+Se `status = blocked`, o agente deve pedir revisão humana dos documentos bloqueantes.
+
+## Checagem de desenvolvimento
+
+Use:
+
+```bash
+python3 tools/dev_check.py
+```
+
+Esse comando valida:
 
 ```text
-status
-can_continue
-message
-next_step
-summary
-blocking_documents
-batch_response
+configuração
+limpeza dos outputs
+pré-triagem de documentos
+pipeline principal
+testes automatizados
 ```
 
-Se `status = ready`, o agente pode avançar para criação das extrações estruturadas JSON.
-
-Se `status = blocked`, o agente deve parar e pedir revisão humana dos documentos bloqueantes.
-
-O relatório de pré-triagem contém:
-
-```markdown
-## Mensagem
-## Próximo passo
-## Resumo
-## Documentos bloqueantes
-## Decisão operacional
-```
-
----
-
-## Regras de conduta
-
-1. Não inventar dados.
-2. Preservar rastreabilidade.
-3. Campos incertos exigem revisão.
-4. Separar classificação, OCR, extração, pré-triagem e validação.
-5. Explicar limitações.
+O agente deve orientar o usuário a rodar `tools/dev_check.py` antes de commits importantes.

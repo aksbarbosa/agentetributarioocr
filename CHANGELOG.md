@@ -1,12 +1,8 @@
 # CHANGELOG — IRPF OCR DEC
 
-Registro das principais etapas implementadas no projeto.
+## 2026-05 — Fundação inicial
 
----
-
-## 2026-05 — Fundação inicial do projeto
-
-### Classificação simples
+### Classificador simples
 
 Implementado:
 
@@ -15,7 +11,7 @@ tools/classify_document.py
 tests/unit/test_classify_document.py
 ```
 
-### Simulador local individual
+### Simulador individual
 
 Implementado:
 
@@ -24,7 +20,7 @@ tools/agent_simulator.py
 tests/unit/test_agent_simulator.py
 ```
 
-### Simulador local em lote
+### Simulador em lote
 
 Implementado:
 
@@ -33,7 +29,7 @@ tools/agent_batch_simulator.py
 tests/unit/test_agent_batch_simulator.py
 ```
 
-O simulador em lote gera:
+Gera:
 
 ```text
 outputs/agent-decisions.json
@@ -50,8 +46,6 @@ tools/preflight_documents.py
 tests/unit/test_preflight_documents.py
 ```
 
-A pré-triagem usa o simulador em lote e decide se o fluxo pode avançar.
-
 Gera:
 
 ```text
@@ -66,20 +60,28 @@ ready
 blocked
 ```
 
-Quando `ready`, o fluxo pode avançar para criação de extrações estruturadas JSON.
+### Pré-triagem no dev_check
 
-Quando `blocked`, o fluxo deve parar até revisão humana dos documentos bloqueantes.
+Atualizado:
 
----
+```text
+tools/dev_check.py
+```
 
-## Ainda não implementado
+A checagem de desenvolvimento agora executa:
 
-- OCR real;
-- leitura de PDF/imagem;
-- classificação automática robusta;
-- geração de `.DEC`;
-- transmissão da declaração;
-- parser reverso `.DEC`;
-- suporte a dependentes;
-- suporte a investimentos;
-- cálculo completo de imposto.
+```text
+1. Validar configuração
+2. Limpar outputs
+3. Rodar pré-triagem de documentos
+4. Rodar projeto
+5. Rodar testes
+```
+
+A pré-triagem usada no `dev_check.py` roda sobre:
+
+```text
+tests/fixtures/raw_text
+```
+
+O cenário bloqueado com documento desconhecido permanece coberto pelos testes automatizados, pois retorna exit code `1` intencionalmente.
