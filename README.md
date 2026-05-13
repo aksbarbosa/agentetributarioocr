@@ -1,10 +1,10 @@
 # IRPF OCR DEC
 
-Projeto experimental para montar uma base de agente/skill para organizar dados de IRPF a partir de documentos, textos extraídos ou extrações estruturadas.
+Projeto experimental para construção de uma skill/agente capaz de auxiliar na montagem inicial da Declaração de Imposto de Renda Pessoa Física a partir de documentos, textos extraídos ou extrações estruturadas.
 
 ## Aviso importante
 
-Este projeto não substitui contador, PGD oficial, revisão humana ou responsabilidade do contribuinte.
+Este projeto não substitui contador, revisão humana, PGD oficial da Receita Federal ou responsabilidade do contribuinte.
 
 Fluxo correto:
 
@@ -41,22 +41,13 @@ O projeto possui:
 - pipeline para extrações simuladas;
 - validação canônica;
 - relatório humano;
+- limpeza de outputs conhecidos;
 - checagem de desenvolvimento integrada;
 - testes automatizados.
 
 Ainda não possui OCR real, leitura direta de PDF/imagem, geração `.DEC` ou integração final com Agno.
 
 ## Fluxos
-
-### Classificador
-
-```text
-tests/fixtures/raw_text/
-    ↓
-tools/classify_document.py
-    ↓
-document_type provável
-```
 
 ### Simulador em lote
 
@@ -78,8 +69,6 @@ outputs/agent-decisions.report.md
 tests/fixtures/raw_text/
     ↓
 tools/preflight_documents.py
-    ↓
-agent_batch_simulator.py
     ↓
 status ready ou blocked
     ↓
@@ -110,41 +99,32 @@ Rodar testes
 python3 tools/run_project.py
 python3 tests/run_tests.py
 python3 tools/dev_check.py
+python3 tools/clean_outputs.py
 ```
 
-Classificador:
+## Limpeza de outputs
 
-```bash
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-python3 tools/classify_document.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
+Arquivo:
+
+```text
+tools/clean_outputs.py
 ```
 
-Simulador individual:
+Remove os outputs conhecidos gerados pelo projeto:
 
-```bash
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --json
-python3 tools/agent_simulator.py tests/fixtures/raw_text/crlv_veiculo_exemplo.txt --save-json outputs/agent-decision.json
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/agent-decision.json
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
 ```
 
-Simulador em lote:
+O `dev_check.py` chama `clean_outputs.py` antes de executar a pré-triagem, o pipeline principal e os testes.
 
-```bash
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text --json
-python3 tools/agent_batch_simulator.py tests/fixtures/raw_text_with_unknown
-```
-
-Pré-triagem:
-
-```bash
-python3 tools/preflight_documents.py tests/fixtures/raw_text
-python3 tools/preflight_documents.py tests/fixtures/raw_text --json
-python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true
-python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown --json || true
-```
-
-## Pré-triagem
+## Pré-triagem de documentos
 
 Arquivo:
 
@@ -166,32 +146,22 @@ ready
 blocked
 ```
 
-Quando `ready`, o fluxo pode avançar para criação de extrações estruturadas JSON.
+Quando `ready`, o fluxo pode avançar para criação das extrações estruturadas JSON.
 
 Quando `blocked`, o fluxo deve parar até revisão humana ou classificação manual dos documentos bloqueantes.
 
-## dev_check
+## Git e versionamento
 
-Arquivo:
-
-```text
-tools/dev_check.py
-```
-
-Agora executa:
-
-```text
-1. Validar configuração
-2. Limpar outputs
-3. Rodar pré-triagem de documentos
-4. Rodar projeto
-5. Rodar testes
-```
-
-A pré-triagem do `dev_check.py` usa somente o cenário positivo:
+Fluxo recomendado:
 
 ```bash
-python3 tools/preflight_documents.py tests/fixtures/raw_text
+git status
+python3 tools/dev_check.py
+git add .
+git commit -m "Mensagem objetiva do que mudou"
+git push
 ```
 
-O cenário bloqueado retorna exit code `1` de propósito e fica coberto pelos testes automatizados.
+## Limitações atuais
+
+O projeto ainda não possui OCR real, leitura de PDF/imagem, classificação robusta de documentos reais, geração de `.DEC`, transmissão da declaração, parser reverso `.DEC`, suporte a dependentes, suporte a investimentos ou cálculo completo de imposto.

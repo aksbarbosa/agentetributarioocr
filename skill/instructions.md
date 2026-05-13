@@ -45,6 +45,28 @@ Se `status = ready`, o agente pode avançar para extrações estruturadas JSON.
 
 Se `status = blocked`, o agente deve pedir revisão humana dos documentos bloqueantes.
 
+## Limpeza de outputs
+
+Use:
+
+```bash
+python3 tools/clean_outputs.py
+```
+
+Esse comando remove outputs conhecidos do pipeline, do simulador individual, do simulador em lote e da pré-triagem.
+
+Arquivos removidos quando existirem:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/agent-decision.json
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
+```
+
 ## Checagem de desenvolvimento
 
 Use:

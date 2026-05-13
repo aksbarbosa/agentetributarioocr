@@ -72,9 +72,28 @@ tools/run_project.py
 tests/run_tests.py
 ```
 
+## Limpeza de outputs
+
+```text
+tools/clean_outputs.py
+```
+
+Remove:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/agent-decision.json
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
+```
+
 ## Comandos
 
 ```bash
+python3 tools/clean_outputs.py
 python3 tools/preflight_documents.py tests/fixtures/raw_text
 python3 tools/preflight_documents.py tests/fixtures/raw_text --json
 python3 tools/preflight_documents.py tests/fixtures/raw_text_with_unknown || true

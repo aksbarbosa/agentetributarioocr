@@ -78,10 +78,40 @@ A checagem de desenvolvimento agora executa:
 5. Rodar testes
 ```
 
-A pré-triagem usada no `dev_check.py` roda sobre:
+### Limpeza de outputs do agente e da pré-triagem
+
+Atualizado:
 
 ```text
-tests/fixtures/raw_text
+tools/clean_outputs.py
+tests/unit/test_clean_outputs.py
 ```
 
-O cenário bloqueado com documento desconhecido permanece coberto pelos testes automatizados, pois retorna exit code `1` intencionalmente.
+A limpeza agora remove também:
+
+```text
+outputs/agent-decision.json
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
+```
+
+Além dos outputs consolidados principais:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+```
+
+## Ainda não implementado
+
+- OCR real;
+- leitura de PDF/imagem;
+- classificação automática robusta;
+- geração de `.DEC`;
+- transmissão da declaração;
+- parser reverso `.DEC`;
+- suporte a dependentes;
+- suporte a investimentos;
+- cálculo completo de imposto.
