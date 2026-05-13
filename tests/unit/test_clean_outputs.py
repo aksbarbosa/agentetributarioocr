@@ -52,6 +52,8 @@ def test_output_files_contains_known_outputs():
         "outputs/agent-decisions.report.md",
         "outputs/preflight-documents.json",
         "outputs/preflight-documents.report.md",
+        "outputs/raw-inputs-manifest.json",
+        "outputs/raw-inputs-manifest.report.md",
     ]
 
     for output_file in expected_outputs:

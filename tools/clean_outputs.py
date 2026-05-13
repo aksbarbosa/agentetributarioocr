@@ -9,6 +9,8 @@ OUTPUT_FILES = [
     "outputs/agent-decisions.report.md",
     "outputs/preflight-documents.json",
     "outputs/preflight-documents.report.md",
+    "outputs/raw-inputs-manifest.json",
+    "outputs/raw-inputs-manifest.report.md",
 ]
 
 
