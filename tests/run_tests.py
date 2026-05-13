@@ -15,11 +15,13 @@ TEST_FILES = [
     "tests/unit/test_pipeline_batch.py",
     "tests/unit/test_report.py",
     "tests/unit/test_clean_outputs.py",
+    "tests/unit/test_scan_raw_inputs.py",
     "tests/unit/test_run_project.py",
     "tests/unit/test_classify_document.py",
     "tests/unit/test_agent_simulator.py",
     "tests/unit/test_agent_batch_simulator.py",
     "tests/unit/test_preflight_documents.py",
+    
 ]
 
 
