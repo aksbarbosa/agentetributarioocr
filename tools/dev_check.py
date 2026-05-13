@@ -2,6 +2,9 @@ import subprocess
 import sys
 
 
+EXECUTED_STEPS = []
+
+
 def run_step(title: str, command: list[str]) -> None:
     """
     Executa uma etapa da checagem de desenvolvimento.
@@ -16,7 +19,21 @@ def run_step(title: str, command: list[str]) -> None:
         print(f"Falhou: {title}")
         sys.exit(result.returncode)
 
+    EXECUTED_STEPS.append(title)
     print(f"OK: {title}")
+
+
+def print_final_summary() -> None:
+    """
+    Imprime resumo final da checagem.
+    """
+    print("")
+    print("Checagem concluída com sucesso.")
+    print("")
+    print("Etapas executadas:")
+
+    for step in EXECUTED_STEPS:
+        print(f"- {step}")
 
 
 def main() -> None:
@@ -47,8 +64,7 @@ def main() -> None:
         [sys.executable, "tests/run_tests.py"],
     )
 
-    print("")
-    print("Checagem concluída com sucesso.")
+    print_final_summary()
 
 
 if __name__ == "__main__":
