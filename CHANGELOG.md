@@ -29,14 +29,6 @@ tools/agent_batch_simulator.py
 tests/unit/test_agent_batch_simulator.py
 ```
 
-Gera:
-
-```text
-outputs/agent-decisions.json
-outputs/agent-decisions.report.md
-recommended_action
-```
-
 ### Pré-triagem de documentos
 
 Implementado:
@@ -68,7 +60,7 @@ Atualizado:
 tools/dev_check.py
 ```
 
-A checagem de desenvolvimento agora executa:
+A checagem de desenvolvimento passou a executar:
 
 ```text
 1. Validar configuração
@@ -87,9 +79,11 @@ tools/clean_outputs.py
 tests/unit/test_clean_outputs.py
 ```
 
-A limpeza agora remove também:
+A limpeza remove:
 
 ```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
 outputs/agent-decision.json
 outputs/agent-decisions.json
 outputs/agent-decisions.report.md
@@ -97,12 +91,28 @@ outputs/preflight-documents.json
 outputs/preflight-documents.report.md
 ```
 
-Além dos outputs consolidados principais:
+### Resumo final no dev_check
+
+Atualizado:
 
 ```text
-outputs/irpf-consolidado.json
-outputs/irpf-consolidado.report.md
+tools/dev_check.py
 ```
+
+A checagem de desenvolvimento agora imprime, ao final, um resumo das etapas executadas:
+
+```text
+Checagem concluída com sucesso.
+
+Etapas executadas:
+- Validar configuração
+- Limpar outputs
+- Rodar pré-triagem de documentos
+- Rodar projeto
+- Rodar testes
+```
+
+Essa melhoria facilita verificar rapidamente quais etapas foram executadas com sucesso.
 
 ## Ainda não implementado
 

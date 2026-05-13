@@ -1,12 +1,30 @@
 # IRPF OCR DEC
 
-Projeto experimental para construção de uma skill/agente capaz de auxiliar na montagem inicial da Declaração de Imposto de Renda Pessoa Física a partir de documentos, textos extraídos ou extrações estruturadas.
+Projeto experimental para construção de uma skill/agente para organizar dados de IRPF a partir de documentos, textos extraídos ou extrações estruturadas.
 
 ## Aviso importante
 
 Este projeto não substitui contador, revisão humana, PGD oficial da Receita Federal ou responsabilidade do contribuinte.
 
-Fluxo correto:
+## Estado atual
+
+O projeto possui:
+
+- classificador simples;
+- simulador local individual;
+- simulador local em lote;
+- pré-triagem de documentos;
+- pipeline para extrações simuladas;
+- validação canônica;
+- relatório humano;
+- limpeza de outputs conhecidos;
+- checagem de desenvolvimento integrada;
+- resumo final da checagem de desenvolvimento;
+- testes automatizados.
+
+Ainda não possui OCR real, leitura direta de PDF/imagem, geração `.DEC` ou integração final com Agno.
+
+## Fluxo correto
 
 ```text
 documento
@@ -30,99 +48,50 @@ revisão
 geração futura do .DEC
 ```
 
-## Estado atual
-
-O projeto possui:
-
-- classificador simples;
-- simulador local individual;
-- simulador local em lote;
-- pré-triagem de documentos;
-- pipeline para extrações simuladas;
-- validação canônica;
-- relatório humano;
-- limpeza de outputs conhecidos;
-- checagem de desenvolvimento integrada;
-- testes automatizados.
-
-Ainda não possui OCR real, leitura direta de PDF/imagem, geração `.DEC` ou integração final com Agno.
-
-## Fluxos
-
-### Simulador em lote
-
-```text
-tests/fixtures/raw_text/
-    ↓
-tools/agent_batch_simulator.py
-    ↓
-summary + recommended_action + decisions
-    ↓
-outputs/agent-decisions.json
-    ↓
-outputs/agent-decisions.report.md
-```
-
-### Pré-triagem
-
-```text
-tests/fixtures/raw_text/
-    ↓
-tools/preflight_documents.py
-    ↓
-status ready ou blocked
-    ↓
-outputs/preflight-documents.json
-    ↓
-outputs/preflight-documents.report.md
-```
-
-### Checagem de desenvolvimento
-
-```text
-tools/dev_check.py
-    ↓
-Validar configuração
-    ↓
-Limpar outputs
-    ↓
-Rodar pré-triagem de documentos
-    ↓
-Rodar projeto
-    ↓
-Rodar testes
-```
-
-## Comandos principais
-
-```bash
-python3 tools/run_project.py
-python3 tests/run_tests.py
-python3 tools/dev_check.py
-python3 tools/clean_outputs.py
-```
-
-## Limpeza de outputs
+## Checagem de desenvolvimento
 
 Arquivo:
 
 ```text
-tools/clean_outputs.py
+tools/dev_check.py
 ```
 
-Remove os outputs conhecidos gerados pelo projeto:
+Comando:
+
+```bash
+python3 tools/dev_check.py
+```
+
+A checagem executa:
 
 ```text
-outputs/irpf-consolidado.json
-outputs/irpf-consolidado.report.md
-outputs/agent-decision.json
-outputs/agent-decisions.json
-outputs/agent-decisions.report.md
-outputs/preflight-documents.json
-outputs/preflight-documents.report.md
+1. Validar configuração
+2. Limpar outputs
+3. Rodar pré-triagem de documentos
+4. Rodar projeto
+5. Rodar testes
 ```
 
-O `dev_check.py` chama `clean_outputs.py` antes de executar a pré-triagem, o pipeline principal e os testes.
+Ao final, imprime:
+
+```text
+Checagem concluída com sucesso.
+
+Etapas executadas:
+- Validar configuração
+- Limpar outputs
+- Rodar pré-triagem de documentos
+- Rodar projeto
+- Rodar testes
+```
+
+A pré-triagem usada no `dev_check.py` roda apenas o cenário positivo:
+
+```bash
+python3 tools/preflight_documents.py tests/fixtures/raw_text
+```
+
+O cenário bloqueado com documento desconhecido retorna exit code `1` de propósito e fica coberto pelos testes automatizados.
 
 ## Pré-triagem de documentos
 
@@ -146,13 +115,36 @@ ready
 blocked
 ```
 
-Quando `ready`, o fluxo pode avançar para criação das extrações estruturadas JSON.
+## Limpeza de outputs
 
-Quando `blocked`, o fluxo deve parar até revisão humana ou classificação manual dos documentos bloqueantes.
+Arquivo:
+
+```text
+tools/clean_outputs.py
+```
+
+Remove:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/agent-decision.json
+outputs/agent-decisions.json
+outputs/agent-decisions.report.md
+outputs/preflight-documents.json
+outputs/preflight-documents.report.md
+```
+
+## Comandos principais
+
+```bash
+python3 tools/run_project.py
+python3 tests/run_tests.py
+python3 tools/dev_check.py
+python3 tools/clean_outputs.py
+```
 
 ## Git e versionamento
-
-Fluxo recomendado:
 
 ```bash
 git status
@@ -161,7 +153,3 @@ git add .
 git commit -m "Mensagem objetiva do que mudou"
 git push
 ```
-
-## Limitações atuais
-
-O projeto ainda não possui OCR real, leitura de PDF/imagem, classificação robusta de documentos reais, geração de `.DEC`, transmissão da declaração, parser reverso `.DEC`, suporte a dependentes, suporte a investimentos ou cálculo completo de imposto.
