@@ -31,3 +31,10 @@ assalariado_simples.report.md
 # Possíveis documentos reais sensíveis
 inputs/raw/*
 !inputs/raw/.gitkeep
+.venv/
+
+.venv/
+outputs/
+__pycache__/
+*.pyc
+.DS_Store
