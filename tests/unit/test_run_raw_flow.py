@@ -5,7 +5,6 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-
 def test_run_raw_flow_cli():
     result = subprocess.run(
         [
@@ -26,6 +25,7 @@ def test_run_raw_flow_cli():
     assert "Gerar extrações estruturadas em lote" in result.stdout
     assert "Validar extrações estruturadas geradas" in result.stdout
     assert "OK: Validar extrações estruturadas geradas" in result.stdout
+    assert "Promover extrações estruturadas válidas para pasta segura" in result.stdout
     assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
 
     assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.json").exists()
@@ -34,7 +34,9 @@ def test_run_raw_flow_cli():
     assert (PROJECT_ROOT / "outputs/extract-text.report.md").exists()
     assert (PROJECT_ROOT / "outputs/structured-extractions-batch.json").exists()
     assert (PROJECT_ROOT / "outputs/structured-extractions-batch.report.md").exists()
-
+    assert (PROJECT_ROOT / "outputs/promote-structured-extractions.json").exists()
+    assert (PROJECT_ROOT / "outputs/promote-structured-extractions.report.md").exists()
+    assert (PROJECT_ROOT / "outputs/promoted_extractions").exists()
 
 def run_tests():
     test_run_raw_flow_cli()

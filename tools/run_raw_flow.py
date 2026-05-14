@@ -94,6 +94,9 @@ def print_final_summary() -> None:
     print("- outputs/structured_extractions/")
     print("- outputs/structured-extractions-batch.json")
     print("- outputs/structured-extractions-batch.report.md")
+    print("- outputs/promoted_extractions/")
+    print("- outputs/promote-structured-extractions.json")
+    print("- outputs/promote-structured-extractions.report.md")
 
 
 def main() -> None:
@@ -102,6 +105,7 @@ def main() -> None:
     Path("outputs").mkdir(exist_ok=True)
     Path("outputs/extracted_text").mkdir(parents=True, exist_ok=True)
     Path("outputs/structured_extractions").mkdir(parents=True, exist_ok=True)
+    Path("outputs/promoted_extractions").mkdir(parents=True, exist_ok=True)
 
     run_step(
         "Escanear documentos brutos",
@@ -125,6 +129,18 @@ def main() -> None:
     )
 
     validate_structured_extractions("outputs/structured_extractions")
+
+    run_step(
+        "Promover extrações estruturadas válidas para pasta segura",
+        [
+            sys.executable,
+            "tools/promote_structured_extractions.py",
+            "outputs/structured_extractions",
+            "outputs/promoted_extractions",
+            "outputs/promote-structured-extractions.json",
+            "outputs/promote-structured-extractions.report.md",
+        ],
+    )
 
     print_final_summary()
 
