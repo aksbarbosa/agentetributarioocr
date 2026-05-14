@@ -11,6 +11,8 @@ OUTPUT_FILES = [
     "outputs/preflight-documents.report.md",
     "outputs/raw-inputs-manifest.json",
     "outputs/raw-inputs-manifest.report.md",
+    "outputs/extract-text.json",
+    "outputs/extract-text.report.md",
 ]
 
 
