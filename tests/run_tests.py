@@ -23,6 +23,7 @@ TEST_FILES = [
     "tests/unit/test_agent_batch_simulator.py",
     "tests/unit/test_preflight_documents.py",
     "tests/unit/test_extract_structured_from_text.py",
+    "tests/unit/test_run_raw_flow.py",
 ]
 
 
