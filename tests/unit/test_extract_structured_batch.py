@@ -56,6 +56,16 @@ def test_should_save_extraction_informe_rendimentos_pj():
     assert should_save_extraction(response) is True
 
 
+def test_should_save_extraction_plano_saude():
+    response = {
+        "extraction": {
+            "document_type": "plano_saude",
+        }
+    }
+
+    assert should_save_extraction(response) is True
+
+
 def test_should_not_save_unknown_extraction():
     response = {
         "extraction": {
@@ -66,7 +76,7 @@ def test_should_not_save_unknown_extraction():
     assert should_save_extraction(response) is False
 
 
-def test_build_batch_response_saves_recibo_medico_and_informe_pj():
+def test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude():
     with tempfile.TemporaryDirectory() as temp_dir:
         input_dir = Path(temp_dir) / "texts"
         output_dir = Path(temp_dir) / "structured"
@@ -114,6 +124,27 @@ def test_build_batch_response_saves_recibo_medico_and_informe_pj():
             encoding="utf-8",
         )
 
+        (input_dir / "plano_saude_teste.txt").write_text(
+            "\n".join(
+                [
+                    "COMPROVANTE DE PAGAMENTO PLANO DE SAUDE",
+                    "",
+                    "DECLARANTE: JOSE DA SILVA",
+                    "CPF DO DECLARANTE: 11122233344",
+                    "DATA DE NASCIMENTO: 01011980",
+                    "",
+                    "OPERADORA: SAUDE TOTAL LTDA",
+                    "CNPJ DA OPERADORA: 11222333000144",
+                    "",
+                    "BENEFICIARIO: JOSE DA SILVA",
+                    "VALOR PAGO: R$ 2400,00",
+                    "VALOR NAO DEDUTIVEL: R$ 0,00",
+                    "ANO CALENDARIO: 2025",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
         (input_dir / "desconhecido.txt").write_text(
             "Texto aleatorio sem palavras fiscais reconhecidas.",
             encoding="utf-8",
@@ -121,22 +152,26 @@ def test_build_batch_response_saves_recibo_medico_and_informe_pj():
 
         response = build_batch_response(str(input_dir), str(output_dir))
 
-        assert response["total_files"] == 3
-        assert response["summary"]["saved_count"] == 2
+        assert response["total_files"] == 4
+        assert response["summary"]["saved_count"] == 3
         assert response["summary"]["requires_review_count"] == 1
 
         assert response["summary"]["by_document_type"]["recibo_medico"] == 1
         assert response["summary"]["by_document_type"]["informe_rendimentos_pj"] == 1
+        assert response["summary"]["by_document_type"]["plano_saude"] == 1
         assert response["summary"]["by_document_type"]["desconhecido"] == 1
 
         recibo_file = output_dir / "teste_recibo.json"
         informe_file = output_dir / "informe_pj_teste.json"
+        plano_file = output_dir / "plano_saude_teste.json"
 
         assert recibo_file.exists()
         assert informe_file.exists()
+        assert plano_file.exists()
 
         recibo_data = json.loads(recibo_file.read_text(encoding="utf-8"))
         informe_data = json.loads(informe_file.read_text(encoding="utf-8"))
+        plano_data = json.loads(plano_file.read_text(encoding="utf-8"))
 
         assert recibo_data["document_type"] == "recibo_medico"
         assert recibo_data["fields"]["valor_pago"]["value"] == 30000
@@ -149,6 +184,13 @@ def test_build_batch_response_saves_recibo_medico_and_informe_pj():
         assert informe_data["fields"]["irrf"]["value"] == 750000
         assert informe_data["fields"]["decimo_terceiro"]["value"] == 400000
         assert informe_data["fields"]["irrf_13"]["value"] == 60000
+
+        assert plano_data["document_type"] == "plano_saude"
+        assert plano_data["fields"]["nome_operadora"]["value"] == "SAUDE TOTAL LTDA"
+        assert plano_data["fields"]["cnpj_operadora"]["value"] == "11222333000144"
+        assert plano_data["fields"]["valor_pago"]["value"] == 240000
+        assert plano_data["fields"]["valor_nao_dedutivel"]["value"] == 0
+        assert plano_data["fields"]["descricao"]["value"] == "PLANO DE SAUDE"
 
 
 def test_extract_structured_batch_cli_outputs():
@@ -201,6 +243,27 @@ def test_extract_structured_batch_cli_outputs():
             encoding="utf-8",
         )
 
+        (input_dir / "plano_saude_teste.txt").write_text(
+            "\n".join(
+                [
+                    "COMPROVANTE DE PAGAMENTO PLANO DE SAUDE",
+                    "",
+                    "DECLARANTE: JOSE DA SILVA",
+                    "CPF DO DECLARANTE: 11122233344",
+                    "DATA DE NASCIMENTO: 01011980",
+                    "",
+                    "OPERADORA: SAUDE TOTAL LTDA",
+                    "CNPJ DA OPERADORA: 11222333000144",
+                    "",
+                    "BENEFICIARIO: JOSE DA SILVA",
+                    "VALOR PAGO: R$ 2400,00",
+                    "VALOR NAO DEDUTIVEL: R$ 0,00",
+                    "ANO CALENDARIO: 2025",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
         result = subprocess.run(
             [
                 sys.executable,
@@ -221,26 +284,30 @@ def test_extract_structured_batch_cli_outputs():
 
         data = json.loads(output_json.read_text(encoding="utf-8"))
 
-        assert data["total_files"] == 2
-        assert data["summary"]["saved_count"] == 2
+        assert data["total_files"] == 3
+        assert data["summary"]["saved_count"] == 3
         assert data["summary"]["requires_review_count"] == 0
 
         assert data["summary"]["by_document_type"]["recibo_medico"] == 1
         assert data["summary"]["by_document_type"]["informe_rendimentos_pj"] == 1
+        assert data["summary"]["by_document_type"]["plano_saude"] == 1
 
         report_text = output_report.read_text(encoding="utf-8")
 
         assert "# Relatório de extração estruturada em lote" in report_text
-        assert "Extrações salvas: 2" in report_text
+        assert "Extrações salvas: 3" in report_text
         assert "Arquivos que exigem revisão: 0" in report_text
         assert "`recibo_medico`: 1" in report_text
         assert "`informe_rendimentos_pj`: 1" in report_text
+        assert "`plano_saude`: 1" in report_text
 
         recibo_file = output_dir / "teste_recibo.json"
         informe_file = output_dir / "informe_pj_teste.json"
+        plano_file = output_dir / "plano_saude_teste.json"
 
         assert recibo_file.exists()
         assert informe_file.exists()
+        assert plano_file.exists()
 
 
 def run_tests():
@@ -248,8 +315,9 @@ def run_tests():
     test_safe_json_name()
     test_should_save_extraction_recibo_medico()
     test_should_save_extraction_informe_rendimentos_pj()
+    test_should_save_extraction_plano_saude()
     test_should_not_save_unknown_extraction()
-    test_build_batch_response_saves_recibo_medico_and_informe_pj()
+    test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude()
     test_extract_structured_batch_cli_outputs()
     print("test_extract_structured_batch.py: todos os testes passaram.")
 

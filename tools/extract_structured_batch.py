@@ -38,6 +38,7 @@ def should_save_extraction(response: dict) -> bool:
     return document_type in {
         "recibo_medico",
         "informe_rendimentos_pj",
+        "plano_saude",
     }
 
 

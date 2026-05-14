@@ -38,7 +38,7 @@ def parse_money_by_label(text: str, label: str) -> int | None:
     Extrai valor monetário associado a um rótulo específico.
 
     Exemplo:
-    RENDIMENTOS TRIBUTAVEIS: R$ 50000,00 -> 5000000
+    VALOR PAGO: R$ 2400,00 -> 240000
     """
     pattern = rf"{label}\s*[:\-]?\s*(?:R\$\s*)?(\d{{1,3}}(?:\.\d{{3}})*|\d+),(\d{{2}})"
     match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -106,6 +106,19 @@ def extract_date_by_label(text: str, label: str) -> str | None:
         return None
 
     return only_digits(match.group(1))
+
+
+def extract_year_by_label(text: str, label: str) -> str | None:
+    """
+    Extrai ano com 4 dígitos associado a um rótulo específico.
+    """
+    pattern = rf"{label}\s*[:\-]?\s*(\d{{4}})"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return match.group(1)
 
 
 def extract_labeled_text_from_line(text: str, label: str) -> str | None:
@@ -395,6 +408,93 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
         "requires_review": build_requires_review(fields),
     }
 
+def build_plano_saude_extraction(input_path: str, text: str) -> dict:
+    """
+    Cria extração estruturada simples para plano de saúde.
+
+    Segue o schema esperado por validate_extracted.py.
+    """
+    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+    nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
+    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
+
+    nome_operadora = (
+        extract_labeled_text_from_line(text, "OPERADORA")
+        or extract_labeled_text_from_line(text, "PLANO DE SAUDE")
+        or extract_labeled_text_from_line(text, "PLANO DE SAÚDE")
+    )
+
+    cnpj_operadora = (
+        extract_cnpj_by_label(text, "CNPJ DA OPERADORA")
+        or extract_cnpj_by_label(text, "CNPJ DO PLANO")
+        or extract_cnpj_by_label(text, "CNPJ")
+    )
+
+    valor_pago = (
+        parse_money_by_label(text, "VALOR PAGO")
+        or parse_money_by_label(text, "TOTAL PAGO")
+        or parse_money_by_label(text, "VALOR TOTAL")
+    )
+
+    valor_nao_dedutivel = (
+        parse_money_by_label(text, "VALOR NAO DEDUTIVEL")
+        or parse_money_by_label(text, "VALOR NÃO DEDUTÍVEL")
+        or parse_money_by_label(text, "PARCELA NAO DEDUTIVEL")
+        or parse_money_by_label(text, "PARCELA NÃO DEDUTÍVEL")
+    )
+
+    if valor_nao_dedutivel is None:
+        valor_nao_dedutivel = 0
+
+    fields = {
+        "cpf_declarante": make_field(
+            cpf_declarante,
+            "medium" if cpf_declarante else "low",
+            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+        ),
+        "nome_declarante": make_field(
+            nome_declarante,
+            "medium" if nome_declarante else "low",
+            "Extraído da linha DECLARANTE, quando disponível.",
+        ),
+        "data_nascimento": make_field(
+            data_nascimento,
+            "medium" if data_nascimento else "low",
+            "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
+        ),
+        "nome_operadora": make_field(
+            nome_operadora,
+            "medium" if nome_operadora else "low",
+            "Extraído da linha OPERADORA, PLANO DE SAUDE ou PLANO DE SAÚDE.",
+        ),
+        "cnpj_operadora": make_field(
+            cnpj_operadora,
+            "medium" if cnpj_operadora else "low",
+            "Extraído da linha CNPJ DA OPERADORA, quando disponível.",
+        ),
+        "valor_pago": make_field(
+            valor_pago,
+            "medium" if valor_pago is not None else "low",
+            "Extraído da linha VALOR PAGO, TOTAL PAGO ou VALOR TOTAL.",
+        ),
+        "valor_nao_dedutivel": make_field(
+            valor_nao_dedutivel,
+            "medium",
+            "Extraído da linha VALOR NAO DEDUTIVEL ou assumido como 0 quando ausente.",
+        ),
+        "descricao": make_field(
+            "PLANO DE SAUDE",
+            "medium",
+            "Inferido a partir do tipo do documento plano_saude.",
+        ),
+    }
+
+    return {
+        "source_file": input_path,
+        "document_type": "plano_saude",
+        "fields": fields,
+        "requires_review": build_requires_review(fields),
+    }
 
 def build_structured_extraction(input_path: str) -> dict:
     """
@@ -411,6 +511,9 @@ def build_structured_extraction(input_path: str) -> dict:
 
     elif document_type == "informe_rendimentos_pj":
         extraction = build_informe_rendimentos_pj_extraction(str(path), text)
+
+    elif document_type == "plano_saude":
+        extraction = build_plano_saude_extraction(str(path), text)
 
     else:
         extraction = {
