@@ -88,11 +88,16 @@ def test_extract_text_from_image_requires_ocr():
 
         assert result["source_name"] == "imagem.jpg"
         assert result["file_type"] == "image"
-        assert result["status"] == "requires_ocr"
-        assert result["text_output_path"] is None
-        assert result["text_length"] == 0
-        assert "Arquivo de imagem exige OCR real" in result["warnings"][0]
+        assert result["status"] in {"requires_ocr", "extracted"}
 
+        if result["status"] == "requires_ocr":
+            assert result["text_output_path"] is None
+            assert result["text_length"] == 0
+            assert result["warnings"]
+
+        if result["status"] == "extracted":
+            assert result["text_output_path"] is not None
+            assert result["text_length"] > 0
 
 def test_extract_text_from_unsupported_file():
     with tempfile.TemporaryDirectory() as temp_dir:

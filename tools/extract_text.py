@@ -68,6 +68,38 @@ def extract_pdf_text(path: Path) -> tuple[str, list[str]]:
 
     return extracted, warnings
 
+def extract_image_text(path: Path) -> tuple[str, list[str]]:
+    """
+    Extrai texto de imagem usando Tesseract.
+
+    Requer:
+    - tesseract instalado no sistema;
+    - pillow instalado no ambiente Python;
+    - pytesseract instalado no ambiente Python.
+    """
+    warnings = []
+
+    try:
+        from PIL import Image
+        import pytesseract
+    except ImportError:
+        warnings.append("pillow/pytesseract não instalados; OCR de imagem indisponível.")
+        return "", warnings
+
+    try:
+        image = Image.open(path)
+        text = pytesseract.image_to_string(image, lang="por+eng")
+    except Exception as exc:
+        warnings.append(f"Falha no OCR da imagem: {exc}")
+        return "", warnings
+
+    extracted = text.strip()
+
+    if not extracted:
+        warnings.append("OCR executado, mas nenhum texto foi extraído da imagem.")
+
+    return extracted, warnings
+
 
 def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
     """
@@ -98,8 +130,8 @@ def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
         status = "extracted" if text else "requires_ocr"
 
     elif file_type == "image":
-        warnings.append("Arquivo de imagem exige OCR real; extração ainda não implementada.")
-        status = "requires_ocr"
+        text, warnings = extract_image_text(source_path)
+        status = "extracted" if text else "requires_ocr"
 
     else:
         warnings.append("Tipo de arquivo não suportado para extração de texto.")
