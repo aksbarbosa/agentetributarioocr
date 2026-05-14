@@ -58,6 +58,8 @@ def test_output_files_contains_known_outputs():
         "outputs/extract-text.report.md",
         "outputs/structured-extractions-batch.json",
         "outputs/structured-extractions-batch.report.md",
+        "outputs/promote-structured-extractions.json",
+        "outputs/promote-structured-extractions.report.md",
     ]
 
     for output_file in expected_outputs:

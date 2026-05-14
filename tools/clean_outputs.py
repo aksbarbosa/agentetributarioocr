@@ -15,6 +15,8 @@ OUTPUT_FILES = [
     "outputs/extract-text.report.md",
     "outputs/structured-extractions-batch.json",
     "outputs/structured-extractions-batch.report.md",
+    "outputs/promote-structured-extractions.json",
+    "outputs/promote-structured-extractions.report.md",
 ]
 
 
