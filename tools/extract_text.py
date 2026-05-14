@@ -68,14 +68,35 @@ def extract_pdf_text(path: Path) -> tuple[str, list[str]]:
 
     return extracted, warnings
 
+def preprocess_image_for_ocr(image):
+    """
+    Aplica pré-processamento simples para melhorar OCR em imagens.
+
+    Etapas:
+    - converte para escala de cinza;
+    - aumenta contraste;
+    - aplica binarização simples.
+    """
+    from PIL import ImageEnhance
+
+    grayscale = image.convert("L")
+
+    contrast = ImageEnhance.Contrast(grayscale)
+    enhanced = contrast.enhance(2.0)
+
+    threshold = 180
+    binary = enhanced.point(lambda pixel: 255 if pixel > threshold else 0)
+
+    return binary
+
+
 def extract_image_text(path: Path) -> tuple[str, list[str]]:
     """
     Extrai texto de imagem usando Tesseract.
 
-    Requer:
-    - tesseract instalado no sistema;
-    - pillow instalado no ambiente Python;
-    - pytesseract instalado no ambiente Python.
+    Tenta primeiro OCR direto.
+    Depois tenta OCR com pré-processamento simples.
+    Retorna o melhor texto encontrado.
     """
     warnings = []
 
@@ -88,17 +109,45 @@ def extract_image_text(path: Path) -> tuple[str, list[str]]:
 
     try:
         image = Image.open(path)
-        text = pytesseract.image_to_string(image, lang="por+eng")
     except Exception as exc:
-        warnings.append(f"Falha no OCR da imagem: {exc}")
+        warnings.append(f"Falha ao abrir imagem: {exc}")
         return "", warnings
 
-    extracted = text.strip()
+    extracted_candidates = []
 
-    if not extracted:
+    try:
+        direct_text = pytesseract.image_to_string(image, lang="por+eng").strip()
+        if direct_text:
+            extracted_candidates.append(
+                {
+                    "strategy": "direct",
+                    "text": direct_text,
+                }
+            )
+    except Exception as exc:
+        warnings.append(f"Falha no OCR direto da imagem: {exc}")
+
+    try:
+        processed_image = preprocess_image_for_ocr(image)
+        processed_text = pytesseract.image_to_string(processed_image, lang="por+eng").strip()
+        if processed_text:
+            extracted_candidates.append(
+                {
+                    "strategy": "preprocessed",
+                    "text": processed_text,
+                }
+            )
+    except Exception as exc:
+        warnings.append(f"Falha no OCR com pré-processamento da imagem: {exc}")
+
+    if not extracted_candidates:
         warnings.append("OCR executado, mas nenhum texto foi extraído da imagem.")
+        return "", warnings
 
-    return extracted, warnings
+    best_candidate = max(extracted_candidates, key=lambda item: len(item["text"]))
+    warnings.append(f"OCR de imagem concluído usando estratégia: {best_candidate['strategy']}.")
+
+    return best_candidate["text"], warnings
 
 
 def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
