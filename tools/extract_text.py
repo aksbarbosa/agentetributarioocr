@@ -31,8 +31,7 @@ def extract_pdf_text(path: Path) -> tuple[str, list[str]]:
     """
     Tenta extrair texto de PDF pesquisável.
 
-    Nesta primeira versão, usa PyPDF se estiver disponível.
-    Se PyPDF não estiver instalado ou o PDF for escaneado, o texto pode sair vazio.
+    Usa pypdf. Se o PDF for escaneado, o texto pode sair vazio.
     """
     warnings = []
 
@@ -63,10 +62,12 @@ def extract_pdf_text(path: Path) -> tuple[str, list[str]]:
 
     if not extracted:
         warnings.append(
-            "Nenhum texto extraído do PDF. O arquivo pode ser escaneado e exigir OCR real."
+            "Nenhum texto extraído do PDF pesquisável. "
+            "O arquivo pode ser escaneado e exigir OCR real."
         )
 
     return extracted, warnings
+
 
 def preprocess_image_for_ocr(image):
     """
@@ -150,6 +151,55 @@ def extract_image_text(path: Path) -> tuple[str, list[str]]:
     return best_candidate["text"], warnings
 
 
+def extract_scanned_pdf_text(path: Path) -> tuple[str, list[str]]:
+    """
+    Extrai texto de PDF escaneado convertendo páginas em imagens e aplicando OCR.
+
+    Requer:
+    - pdf2image;
+    - poppler instalado no sistema;
+    - pillow;
+    - pytesseract;
+    - tesseract instalado no sistema.
+    """
+    warnings = []
+
+    try:
+        from pdf2image import convert_from_path
+        import pytesseract
+    except ImportError:
+        warnings.append("pdf2image/pytesseract não instalados; OCR de PDF escaneado indisponível.")
+        return "", warnings
+
+    try:
+        pages = convert_from_path(str(path), dpi=300)
+    except Exception as exc:
+        warnings.append(f"Falha ao converter PDF escaneado em imagens: {exc}")
+        return "", warnings
+
+    pages_text = []
+
+    for index, image in enumerate(pages, start=1):
+        try:
+            processed_image = preprocess_image_for_ocr(image)
+            text = pytesseract.image_to_string(processed_image, lang="por+eng").strip()
+        except Exception as exc:
+            warnings.append(f"Falha no OCR da página {index}: {exc}")
+            text = ""
+
+        if text:
+            pages_text.append(f"--- Página {index} ---\n{text}")
+
+    extracted = "\n\n".join(pages_text).strip()
+
+    if not extracted:
+        warnings.append("OCR do PDF escaneado executado, mas nenhum texto foi extraído.")
+    else:
+        warnings.append(f"OCR de PDF escaneado concluído em {len(pages)} página(s).")
+
+    return extracted, warnings
+
+
 def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
     """
     Extrai texto de um arquivo individual, quando possível.
@@ -176,7 +226,14 @@ def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
 
     elif file_type == "pdf":
         text, warnings = extract_pdf_text(source_path)
-        status = "extracted" if text else "requires_ocr"
+
+        if text:
+            status = "extracted"
+        else:
+            ocr_text, ocr_warnings = extract_scanned_pdf_text(source_path)
+            warnings.extend(ocr_warnings)
+            text = ocr_text
+            status = "extracted" if text else "requires_ocr"
 
     elif file_type == "image":
         text, warnings = extract_image_text(source_path)
@@ -201,7 +258,8 @@ def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
         "text_length": len(text),
         "warnings": warnings,
     }
-    
+
+
 def build_summary(results: list[dict]) -> dict:
     """
     Resume os resultados da extração.
