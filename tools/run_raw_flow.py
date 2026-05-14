@@ -29,6 +29,47 @@ def run_step(title: str, command: list[str], allow_failure: bool = False) -> int
     return result.returncode
 
 
+def collect_structured_json_files(output_dir: str) -> list[Path]:
+    """
+    Coleta os JSONs estruturados gerados pelo fluxo real.
+    """
+    path = Path(output_dir)
+
+    if not path.exists():
+        return []
+
+    return sorted(path.glob("*.json"))
+
+
+def validate_structured_extractions(output_dir: str) -> None:
+    """
+    Valida todos os JSONs estruturados gerados em lote.
+    """
+    files = collect_structured_json_files(output_dir)
+
+    print("")
+    print("==> Validar extrações estruturadas geradas")
+
+    if not files:
+        print("Nenhuma extração estruturada gerada para validar.")
+        EXECUTED_STEPS.append("Validar extrações estruturadas geradas")
+        print("OK: Validar extrações estruturadas geradas")
+        return
+
+    for file_path in files:
+        command = [sys.executable, "tools/validate_extracted.py", str(file_path)]
+        print("$ " + " ".join(command))
+
+        result = subprocess.run(command)
+
+        if result.returncode != 0:
+            print(f"Falhou ao validar: {file_path}")
+            sys.exit(result.returncode)
+
+    EXECUTED_STEPS.append("Validar extrações estruturadas geradas")
+    print("OK: Validar extrações estruturadas geradas")
+
+
 def print_final_summary() -> None:
     """
     Imprime resumo final do fluxo.
@@ -82,6 +123,8 @@ def main() -> None:
         "Gerar extrações estruturadas em lote",
         [sys.executable, "tools/extract_structured_batch.py", "outputs/extracted_text"],
     )
+
+    validate_structured_extractions("outputs/structured_extractions")
 
     print_final_summary()
 

@@ -24,6 +24,8 @@ def test_run_raw_flow_cli():
     assert "Extrair texto dos documentos brutos" in result.stdout
     assert "Rodar pré-triagem dos textos extraídos" in result.stdout
     assert "Gerar extrações estruturadas em lote" in result.stdout
+    assert "Validar extrações estruturadas geradas" in result.stdout
+    assert "OK: Validar extrações estruturadas geradas" in result.stdout
     assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
 
     assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.json").exists()
