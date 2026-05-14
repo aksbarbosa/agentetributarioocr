@@ -85,7 +85,13 @@ def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
 
     if file_type == "text":
         text, warnings = read_text_file(source_path)
-        status = "extracted"
+        text = text.strip()
+
+        if text:
+            status = "extracted"
+        else:
+            warnings.append("Arquivo de texto vazio; nada foi extraído.")
+            status = "empty"
 
     elif file_type == "pdf":
         text, warnings = extract_pdf_text(source_path)
@@ -114,8 +120,7 @@ def extract_text_from_file(file_info: dict, output_dir: str) -> dict:
         "text_length": len(text),
         "warnings": warnings,
     }
-
-
+    
 def build_summary(results: list[dict]) -> dict:
     """
     Resume os resultados da extração.
@@ -124,6 +129,7 @@ def build_summary(results: list[dict]) -> dict:
     extracted_count = 0
     requires_ocr_count = 0
     unsupported_count = 0
+    empty_count = 0
 
     for item in results:
         status = item["status"]
@@ -135,12 +141,15 @@ def build_summary(results: list[dict]) -> dict:
             requires_ocr_count += 1
         elif status == "unsupported":
             unsupported_count += 1
+        elif status == "empty":
+            empty_count += 1
 
     return {
         "by_status": by_status,
         "extracted_count": extracted_count,
         "requires_ocr_count": requires_ocr_count,
         "unsupported_count": unsupported_count,
+        "empty_count": empty_count,
     }
 
 
@@ -199,6 +208,7 @@ def generate_markdown_report(response: dict) -> str:
     lines.append(f"- Textos extraídos: {summary['extracted_count']}")
     lines.append(f"- Arquivos que exigem OCR real: {summary['requires_ocr_count']}")
     lines.append(f"- Arquivos não suportados: {summary['unsupported_count']}")
+    lines.append(f"- Arquivos vazios: {summary['empty_count']}")
     lines.append("")
 
     lines.append("## Status")
@@ -265,6 +275,7 @@ def print_human_summary(response: dict, output_json: str, output_report: str) ->
     print(f"- Textos extraídos: {summary['extracted_count']}")
     print(f"- Arquivos que exigem OCR real: {summary['requires_ocr_count']}")
     print(f"- Arquivos não suportados: {summary['unsupported_count']}")
+    print(f"- Arquivos vazios: {summary['empty_count']}")
 
 
 def print_json_response(response: dict) -> None:
