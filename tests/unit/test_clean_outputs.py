@@ -56,6 +56,8 @@ def test_output_files_contains_known_outputs():
         "outputs/raw-inputs-manifest.report.md",
         "outputs/extract-text.json",
         "outputs/extract-text.report.md",
+        "outputs/structured-extractions-batch.json",
+        "outputs/structured-extractions-batch.report.md",
     ]
 
     for output_file in expected_outputs:

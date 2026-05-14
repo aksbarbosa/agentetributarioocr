@@ -13,6 +13,8 @@ OUTPUT_FILES = [
     "outputs/raw-inputs-manifest.report.md",
     "outputs/extract-text.json",
     "outputs/extract-text.report.md",
+    "outputs/structured-extractions-batch.json",
+    "outputs/structured-extractions-batch.report.md",
 ]
 
 
