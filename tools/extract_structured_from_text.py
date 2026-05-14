@@ -20,8 +20,28 @@ def parse_money_to_cents(text: str) -> int | None:
     Exemplos:
     R$ 300,00 -> 30000
     300,00 -> 30000
+    1.250,50 -> 125050
     """
     match = re.search(r"(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*|\d+),(\d{2})", text)
+
+    if not match:
+        return None
+
+    reais = match.group(1).replace(".", "")
+    centavos = match.group(2)
+
+    return int(reais) * 100 + int(centavos)
+
+
+def parse_money_by_label(text: str, label: str) -> int | None:
+    """
+    Extrai valor monetário associado a um rótulo específico.
+
+    Exemplo:
+    RENDIMENTOS TRIBUTAVEIS: R$ 50000,00 -> 5000000
+    """
+    pattern = rf"{label}\s*[:\-]?\s*(?:R\$\s*)?(\d{{1,3}}(?:\.\d{{3}})*|\d+),(\d{{2}})"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
 
     if not match:
         return None
@@ -57,6 +77,19 @@ def extract_labeled_cpf_from_text(text: str, label: str) -> str | None:
     return only_digits(match.group(1))
 
 
+def extract_cnpj_by_label(text: str, label: str) -> str | None:
+    """
+    Extrai CNPJ associado a um rótulo específico.
+    """
+    pattern = rf"{label}\s*[:\-]?\s*(\d{{2}}\.?\d{{3}}\.?\d{{3}}\/?\d{{4}}-?\d{{2}})"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return only_digits(match.group(1))
+
+
 def extract_date_by_label(text: str, label: str) -> str | None:
     """
     Extrai data associada a um rótulo específico.
@@ -75,11 +108,36 @@ def extract_date_by_label(text: str, label: str) -> str | None:
     return only_digits(match.group(1))
 
 
+def extract_labeled_text_from_line(text: str, label: str) -> str | None:
+    """
+    Extrai texto associado a um rótulo em uma linha.
+    """
+    pattern = rf"^{label}\s*[:\-]?\s*(.+)$"
+
+    for line in text.splitlines():
+        line_clean = line.strip()
+
+        if not line_clean:
+            continue
+
+        match = re.search(pattern, line_clean, flags=re.IGNORECASE)
+
+        if match:
+            value = match.group(1).strip()
+            return value.upper()
+
+    return None
+
+
 def extract_crm_from_text(text: str) -> str | None:
     """
     Extrai CRM simples do texto.
     """
-    match = re.search(r"\bCRM\s*[:\-]?\s*([A-Z]{2}\s*)?\d{3,10}\b", text, flags=re.IGNORECASE)
+    match = re.search(
+        r"\bCRM\s*[:\-]?\s*([A-Z]{2}\s*)?\d{3,10}\b",
+        text,
+        flags=re.IGNORECASE,
+    )
 
     if not match:
         return None
@@ -130,7 +188,11 @@ def extract_patient_name(text: str) -> str | None:
     """
     Extrai nome do paciente em padrões simples.
     """
-    match = re.search(r"PACIENTE\s*[:\-]?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ ]+)", text, flags=re.IGNORECASE)
+    match = re.search(
+        r"PACIENTE\s*[:\-]?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ ]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
 
     if not match:
         return None
@@ -141,64 +203,21 @@ def extract_patient_name(text: str) -> str | None:
     return name.upper()
 
 
-def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
+def make_field(value, confidence: str, source_hint: str) -> dict:
     """
-    Cria extração estruturada simples para recibo médico.
-
-    Esta função segue o contrato esperado por validate_extracted.py.
-    Campos não encontrados são incluídos com confidence low para revisão humana.
+    Cria campo no formato esperado pelo validador.
     """
-    valor_centavos = parse_money_to_cents(text)
-    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
-    cpf_profissional = extract_labeled_cpf_from_text(text, "CPF DO PROFISSIONAL") or extract_cpf_from_text(text)
-    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
-    data_pagamento = extract_date_by_label(text, "DATA DO PAGAMENTO")
-    nome_profissional = extract_professional_name(text)
-    nome_paciente = extract_patient_name(text)
-
-    fields = {
-        "cpf_declarante": {
-            "value": cpf_declarante,
-            "confidence": "medium" if cpf_declarante else "low",
-            "source_hint": "Extraído da linha CPF DO DECLARANTE, quando disponível.",
-        },
-        "nome_declarante": {
-            "value": nome_paciente,
-            "confidence": "medium" if nome_paciente else "low",
-            "source_hint": "Extraído da linha do paciente, quando disponível.",
-        },
-        "data_nascimento": {
-            "value": data_nascimento,
-            "confidence": "medium" if data_nascimento else "low",
-            "source_hint": "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
-        },
-        "cpf_cnpj_prestador": {
-            "value": cpf_profissional,
-            "confidence": "medium" if cpf_profissional else "low",
-            "source_hint": "Extraído da linha CPF DO PROFISSIONAL, quando disponível.",
-        },
-        "nome_prestador": {
-            "value": nome_profissional,
-            "confidence": "medium" if nome_profissional else "low",
-            "source_hint": "Extraído da linha iniciada por MEDICO, MÉDICO, DR ou DRA.",
-        },
-        "valor_pago": {
-            "value": valor_centavos,
-            "confidence": "medium" if valor_centavos is not None else "low",
-            "source_hint": "Extraído do primeiro valor monetário encontrado no texto.",
-        },
-        "data_pagamento": {
-            "value": data_pagamento,
-            "confidence": "medium" if data_pagamento else "low",
-            "source_hint": "Extraído da linha DATA DO PAGAMENTO, quando disponível.",
-        },
-        "descricao": {
-            "value": "CONSULTA MEDICA",
-            "confidence": "medium" if "CONSULTA" in text.upper() else "low",
-            "source_hint": "Inferido a partir da ocorrência de CONSULTA no texto.",
-        },
+    return {
+        "value": value,
+        "confidence": confidence,
+        "source_hint": source_hint,
     }
 
+
+def build_requires_review(fields: dict) -> list[dict]:
+    """
+    Cria lista de revisão para campos ausentes ou de baixa confiança.
+    """
     requires_review = []
 
     for field_name, field_data in fields.items():
@@ -218,11 +237,162 @@ def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
                 }
             )
 
+    return requires_review
+
+
+def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
+    """
+    Cria extração estruturada simples para recibo médico.
+
+    Esta função segue o contrato esperado por validate_extracted.py.
+    Campos não encontrados são incluídos com confidence low para revisão humana.
+    """
+    valor_centavos = parse_money_to_cents(text)
+    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+    cpf_profissional = (
+        extract_labeled_cpf_from_text(text, "CPF DO PROFISSIONAL")
+        or extract_cpf_from_text(text)
+    )
+    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
+    data_pagamento = extract_date_by_label(text, "DATA DO PAGAMENTO")
+    nome_profissional = extract_professional_name(text)
+    nome_paciente = extract_patient_name(text)
+
+    fields = {
+        "cpf_declarante": make_field(
+            cpf_declarante,
+            "medium" if cpf_declarante else "low",
+            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+        ),
+        "nome_declarante": make_field(
+            nome_paciente,
+            "medium" if nome_paciente else "low",
+            "Extraído da linha do paciente, quando disponível.",
+        ),
+        "data_nascimento": make_field(
+            data_nascimento,
+            "medium" if data_nascimento else "low",
+            "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
+        ),
+        "cpf_cnpj_prestador": make_field(
+            cpf_profissional,
+            "medium" if cpf_profissional else "low",
+            "Extraído da linha CPF DO PROFISSIONAL, quando disponível.",
+        ),
+        "nome_prestador": make_field(
+            nome_profissional,
+            "medium" if nome_profissional else "low",
+            "Extraído da linha iniciada por MEDICO, MÉDICO, DR ou DRA.",
+        ),
+        "valor_pago": make_field(
+            valor_centavos,
+            "medium" if valor_centavos is not None else "low",
+            "Extraído do primeiro valor monetário encontrado no texto.",
+        ),
+        "data_pagamento": make_field(
+            data_pagamento,
+            "medium" if data_pagamento else "low",
+            "Extraído da linha DATA DO PAGAMENTO, quando disponível.",
+        ),
+        "descricao": make_field(
+            "CONSULTA MEDICA",
+            "medium" if "CONSULTA" in text.upper() else "low",
+            "Inferido a partir da ocorrência de CONSULTA no texto.",
+        ),
+    }
+
     return {
         "source_file": input_path,
         "document_type": "recibo_medico",
         "fields": fields,
-        "requires_review": requires_review,
+        "requires_review": build_requires_review(fields),
+    }
+
+
+def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
+    """
+    Cria extração estruturada simples para informe de rendimentos PJ.
+    """
+    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+    nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
+    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
+
+    nome_pagador = (
+        extract_labeled_text_from_line(text, "FONTE PAGADORA")
+        or extract_labeled_text_from_line(text, "PAGADOR")
+        or extract_labeled_text_from_line(text, "EMPRESA")
+    )
+
+    cnpj_pagador = (
+        extract_cnpj_by_label(text, "CNPJ DA FONTE PAGADORA")
+        or extract_cnpj_by_label(text, "CNPJ DO PAGADOR")
+        or extract_cnpj_by_label(text, "CNPJ")
+    )
+
+    rendimento_total = parse_money_by_label(text, "RENDIMENTOS TRIBUTAVEIS")
+    previdencia_oficial = parse_money_by_label(text, "PREVIDENCIA OFICIAL")
+    irrf = parse_money_by_label(text, "IMPOSTO DE RENDA RETIDO NA FONTE")
+    decimo_terceiro = parse_money_by_label(text, "DECIMO TERCEIRO SALARIO")
+    irrf_13 = parse_money_by_label(text, "IRRF SOBRE DECIMO TERCEIRO")
+
+    fields = {
+        "cpf_declarante": make_field(
+            cpf_declarante,
+            "medium" if cpf_declarante else "low",
+            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+        ),
+        "nome_declarante": make_field(
+            nome_declarante,
+            "medium" if nome_declarante else "low",
+            "Extraído da linha DECLARANTE, quando disponível.",
+        ),
+        "data_nascimento": make_field(
+            data_nascimento,
+            "medium" if data_nascimento else "low",
+            "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
+        ),
+        "nome_pagador": make_field(
+            nome_pagador,
+            "medium" if nome_pagador else "low",
+            "Extraído da linha FONTE PAGADORA, PAGADOR ou EMPRESA.",
+        ),
+        "cnpj_pagador": make_field(
+            cnpj_pagador,
+            "medium" if cnpj_pagador else "low",
+            "Extraído da linha CNPJ DA FONTE PAGADORA, quando disponível.",
+        ),
+        "rendimento_total": make_field(
+            rendimento_total,
+            "medium" if rendimento_total is not None else "low",
+            "Extraído da linha RENDIMENTOS TRIBUTAVEIS.",
+        ),
+        "previdencia_oficial": make_field(
+            previdencia_oficial,
+            "medium" if previdencia_oficial is not None else "low",
+            "Extraído da linha PREVIDENCIA OFICIAL.",
+        ),
+        "decimo_terceiro": make_field(
+            decimo_terceiro,
+            "medium" if decimo_terceiro is not None else "low",
+            "Extraído da linha DECIMO TERCEIRO SALARIO.",
+        ),
+        "irrf": make_field(
+            irrf,
+            "medium" if irrf is not None else "low",
+            "Extraído da linha IMPOSTO DE RENDA RETIDO NA FONTE.",
+        ),
+        "irrf_13": make_field(
+            irrf_13,
+            "medium" if irrf_13 is not None else "low",
+            "Extraído da linha IRRF SOBRE DECIMO TERCEIRO.",
+        ),
+    }
+
+    return {
+        "source_file": input_path,
+        "document_type": "informe_rendimentos_pj",
+        "fields": fields,
+        "requires_review": build_requires_review(fields),
     }
 
 
@@ -238,6 +408,10 @@ def build_structured_extraction(input_path: str) -> dict:
 
     if document_type == "recibo_medico":
         extraction = build_recibo_medico_extraction(str(path), text)
+
+    elif document_type == "informe_rendimentos_pj":
+        extraction = build_informe_rendimentos_pj_extraction(str(path), text)
+
     else:
         extraction = {
             "source_file": str(path),

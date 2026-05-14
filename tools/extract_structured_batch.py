@@ -31,11 +31,14 @@ def should_save_extraction(response: dict) -> bool:
     """
     Define se a extração deve ser salva como JSON individual.
 
-    Por enquanto, salva apenas tipos suportados automaticamente.
+    Salva apenas tipos com extração estruturada automática implementada.
     """
     document_type = response["extraction"]["document_type"]
 
-    return document_type == "recibo_medico"
+    return document_type in {
+        "recibo_medico",
+        "informe_rendimentos_pj",
+    }
 
 
 def save_json(data: dict, output_path: str) -> None:
@@ -47,55 +50,6 @@ def save_json(data: dict, output_path: str) -> None:
 
     with path.open("w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
-
-
-def build_batch_response(input_dir: str, output_dir: str) -> dict:
-    """
-    Gera extrações estruturadas em lote a partir de textos extraídos.
-    """
-    files = collect_text_files(input_dir)
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    results = []
-
-    for file_path in files:
-        response = build_structured_extraction(str(file_path))
-        extraction = response["extraction"]
-        classification = response["classification"]
-
-        saved_output_path = None
-        status = "skipped"
-
-        if should_save_extraction(response):
-            saved_output_path = output_path / safe_json_name(file_path)
-            save_json(extraction, str(saved_output_path))
-            status = "saved"
-        else:
-            status = "requires_review"
-
-        results.append(
-            {
-                "input_path": str(file_path),
-                "document_type": extraction["document_type"],
-                "classification_confidence": classification["confidence"],
-                "status": status,
-                "output_path": str(saved_output_path) if saved_output_path else None,
-                "requires_review_count": len(extraction.get("requires_review", [])),
-                "classification": classification,
-                "extraction": extraction,
-            }
-        )
-
-    summary = build_summary(results)
-
-    return {
-        "input_dir": input_dir,
-        "output_dir": output_dir,
-        "total_files": len(files),
-        "summary": summary,
-        "results": results,
-    }
 
 
 def build_summary(results: list[dict]) -> dict:
@@ -125,6 +79,54 @@ def build_summary(results: list[dict]) -> dict:
         "by_status": by_status,
         "saved_count": saved_count,
         "requires_review_count": requires_review_count,
+    }
+
+
+def build_batch_response(input_dir: str, output_dir: str) -> dict:
+    """
+    Gera extrações estruturadas em lote a partir de textos extraídos.
+    """
+    files = collect_text_files(input_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    results = []
+
+    for file_path in files:
+        response = build_structured_extraction(str(file_path))
+        extraction = response["extraction"]
+        classification = response["classification"]
+
+        saved_output_path = None
+
+        if should_save_extraction(response):
+            saved_output_path = output_path / safe_json_name(file_path)
+            save_json(extraction, str(saved_output_path))
+            status = "saved"
+        else:
+            status = "requires_review"
+
+        results.append(
+            {
+                "input_path": str(file_path),
+                "document_type": extraction["document_type"],
+                "classification_confidence": classification["confidence"],
+                "status": status,
+                "output_path": str(saved_output_path) if saved_output_path else None,
+                "requires_review_count": len(extraction.get("requires_review", [])),
+                "classification": classification,
+                "extraction": extraction,
+            }
+        )
+
+    summary = build_summary(results)
+
+    return {
+        "input_dir": input_dir,
+        "output_dir": output_dir,
+        "total_files": len(files),
+        "summary": summary,
+        "results": results,
     }
 
 
@@ -237,8 +239,14 @@ def parse_args(argv: list[str]) -> tuple[str, str, str, str, bool]:
         print("Uso:")
         print("python3 tools/extract_structured_batch.py input_text_dir")
         print("python3 tools/extract_structured_batch.py input_text_dir --json")
-        print("python3 tools/extract_structured_batch.py input_text_dir output_dir output.json output.report.md")
-        print("python3 tools/extract_structured_batch.py input_text_dir output_dir output.json output.report.md --json")
+        print(
+            "python3 tools/extract_structured_batch.py "
+            "input_text_dir output_dir output.json output.report.md"
+        )
+        print(
+            "python3 tools/extract_structured_batch.py "
+            "input_text_dir output_dir output.json output.report.md --json"
+        )
         sys.exit(1)
 
     input_dir = argv[1]
@@ -263,6 +271,16 @@ def parse_args(argv: list[str]) -> tuple[str, str, str, str, bool]:
         return input_dir, output_dir, output_json, output_report, print_json
 
     print("Uso inválido.")
+    print("python3 tools/extract_structured_batch.py input_text_dir")
+    print("python3 tools/extract_structured_batch.py input_text_dir --json")
+    print(
+        "python3 tools/extract_structured_batch.py "
+        "input_text_dir output_dir output.json output.report.md"
+    )
+    print(
+        "python3 tools/extract_structured_batch.py "
+        "input_text_dir output_dir output.json output.report.md --json"
+    )
     sys.exit(1)
 
 
