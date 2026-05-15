@@ -1,9 +1,13 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environment
 .venv/
 venv/
 env/
@@ -11,40 +15,66 @@ env/
 # macOS
 .DS_Store
 
-# Outputs gerados
-outputs/*.json
-outputs/*.md
+# IDE/editor
+.vscode/
+.idea/
 
-# Arquivos gerados na raiz
-*.canonical.json
-*.report.md
-irpf-consolidado.json
-irpf-gerado.json
-irpf-gerado.report.md
-irpf-2026.report.md
-assalariado_simples.report.md
-
-# Arquivos temporários
-*.tmp
+# Logs
 *.log
 
-# Possíveis documentos reais sensíveis
-inputs/raw/*
-!inputs/raw/.gitkeep
-.venv/
+# Temporary files
+*.tmp
+*.bak
+*.swp
 
-.venv/
-outputs/
-__pycache__/
-*.pyc
-.DS_Store
-.venv/
-
-# Local real-document test folders
+# Local raw/private documents
+inputs/raw/
 inputs/raw_test_*/
-outputs/*_test_*
-outputs/*-test-*
-outputs/approved_test*
-outputs/promoted_test*
-outputs/structured_extractions_test*
-outputs/extracted_text_test*
+inputs/raw_ignored/
+inputs/private/
+inputs/real/
+
+# Local extracted/generated text from real documents
+outputs/
+
+# Keep output directory structure only if needed
+!outputs/.gitkeep
+
+# Test artifacts
+*_test_output/
+tmp/
+temp/
+
+# Local OCR/preprocessed artifacts
+outputs/preprocessed_raw/
+outputs/raw_prepared_for_ocr/
+outputs/extracted_text/
+outputs/extracted_text_prepared/
+outputs/extracted_text_best/
+outputs/structured_extractions/
+outputs/structured_extractions_prepared/
+outputs/structured_extractions_best/
+outputs/promoted_extractions/
+outputs/promoted_extractions_prepared/
+outputs/promoted_extractions_best/
+outputs/approved_test/
+outputs/approved_best/
+
+# Sensitive fiscal data
+*.dec
+*.DEC
+*.pdf
+*.PDF
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.webp
+
+# Allow project documentation images only if explicitly placed here
+!docs/images/
+!docs/images/**
+
+# Local notes
+local_notes.md
