@@ -36,7 +36,7 @@ def make_extraction(document_type="recibo_medico", low_confidence=False, missing
                 "source_hint": "teste",
             },
             "cpf_declarante": {
-                "value": "11122233344",
+                "value": "12345678909",
                 "confidence": "medium",
                 "source_hint": "teste",
             },
