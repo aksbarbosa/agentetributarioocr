@@ -1,6 +1,6 @@
 # IRPF OCR DEC
 
-Projeto experimental para construção de uma skill/agente capaz de auxiliar na organização inicial de dados para Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos, textos extraídos, PDFs pesquisáveis, imagens com OCR ou extrações estruturadas.
+Projeto experimental para construção de uma skill/agente capaz de auxiliar na organização inicial de dados para Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos brutos, textos extraídos, PDFs pesquisáveis, PDFs escaneados, imagens com OCR e extrações estruturadas.
 
 A ideia central é transformar documentos fiscais em um JSON canônico revisável e, futuramente, gerar um arquivo `.DEC` experimental importável no PGD oficial da Receita Federal.
 
@@ -10,7 +10,7 @@ A ideia central é transformar documentos fiscais em um JSON canônico revisáve
 
 Este projeto não substitui contador, revisão humana, PGD oficial da Receita Federal ou responsabilidade do contribuinte.
 
-O fluxo correto é:
+O fluxo correto deve sempre preservar uma etapa de conferência humana:
 
 ```text
 documento bruto
@@ -27,13 +27,13 @@ validação da extração
     ↓
 promoção segura
     ↓
+revisão humana
+    ↓
 JSON canônico
     ↓
 validação canônica
     ↓
 relatório humano
-    ↓
-revisão
     ↓
 geração futura do .DEC
 ```
@@ -42,7 +42,7 @@ geração futura do .DEC
 
 ## Estado atual do projeto
 
-O projeto já possui uma base funcional para processamento determinístico e um primeiro fluxo real a partir de arquivos brutos.
+O projeto já possui uma base funcional para processamento determinístico e um fluxo real inicial a partir de arquivos brutos.
 
 Atualmente existe suporte para:
 
@@ -53,11 +53,13 @@ Atualmente existe suporte para:
 - scanner de documentos brutos em `inputs/raw/`;
 - extração de texto de `.txt`;
 - extração de texto de PDF pesquisável com `pypdf`;
-- tentativa de OCR de imagem com Tesseract via `pytesseract`;
-- extração estruturada heurística para `recibo_medico`;
+- OCR de imagem com Tesseract via `pytesseract`;
+- pré-processamento simples de imagem para OCR;
+- fallback OCR para PDF escaneado usando `pdf2image` + Poppler + Tesseract;
+- extração estruturada heurística para os 5 tipos principais do pipeline;
 - extração estruturada em lote;
 - validação de extrações estruturadas;
-- promoção segura de extrações válidas;
+- promoção segura de extrações válidas e sem `requires_review`;
 - pipeline canônico a partir de `inputs/extracted/`;
 - validação canônica;
 - relatório humano;
@@ -67,9 +69,10 @@ Atualmente existe suporte para:
 
 Ainda não possui:
 
-- OCR robusto para todos os tipos de PDF escaneado;
-- pré-processamento avançado de imagem;
-- suporte amplo a todos os documentos reais de IRPF;
+- OCR robusto para todos os cenários reais;
+- revisão humana assistida completa;
+- interface de correção;
+- integração final com Agno;
 - geração `.DEC`;
 - transmissão de declaração;
 - parser reverso `.DEC`;
@@ -136,15 +139,21 @@ Recebe textos extraídos de arquivos brutos.
 
 Recebe JSONs estruturados gerados automaticamente a partir dos textos extraídos.
 
+Essa pasta contém resultados automáticos e ainda pode incluir itens que exigem revisão.
+
 ### `outputs/promoted_extractions/`
 
-Área segura de promoção. Contém somente extrações estruturadas válidas e sem `requires_review`.
+Área segura de promoção.
+
+Contém somente extrações estruturadas válidas e sem `requires_review`.
 
 Esses arquivos ainda não são copiados automaticamente para `inputs/extracted/`.
 
 ### `inputs/extracted/`
 
-Entrada oficial do pipeline canônico. Deve conter apenas JSONs estruturados revisados, válidos e seguros para consolidação.
+Entrada oficial do pipeline canônico.
+
+Deve conter apenas JSONs estruturados revisados, válidos e seguros para consolidação.
 
 ---
 
@@ -166,12 +175,13 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
 
-O `requirements.txt` deve conter:
+O `requirements.txt` atual deve conter:
 
 ```text
 pypdf
 pillow
 pytesseract
+pdf2image
 ```
 
 ### 3. Instalar Tesseract no macOS
@@ -187,6 +197,33 @@ Conferir:
 tesseract --version
 ```
 
+### 4. Instalar Poppler no macOS
+
+O `pdf2image` usa utilitários do Poppler para converter páginas de PDF em imagens.
+
+```bash
+brew install poppler
+```
+
+Conferir:
+
+```bash
+pdftoppm -h
+```
+
+### 5. Testar dependências
+
+```bash
+python3 - <<'PY'
+import pypdf
+import pytesseract
+from PIL import Image
+from pdf2image import convert_from_path
+
+print("Dependências Python OK")
+PY
+```
+
 ---
 
 ## Documentos suportados atualmente
@@ -199,19 +236,23 @@ tesseract --version
 | Bem imóvel | `bem_imovel` | `bens[]` |
 | Bem veículo | `bem_veiculo` | `bens[]` |
 
-A extração estruturada automática a partir de texto está implementada inicialmente para:
+A extração estruturada automática a partir de texto já cobre os principais tipos usados pelo pipeline canônico:
 
 ```text
 recibo_medico
+informe_rendimentos_pj
+plano_saude
+bem_veiculo
+bem_imovel
 ```
 
-Outros tipos podem ser classificados, mas ainda podem exigir criação manual ou futura implementação de extração estruturada específica.
+Essas extrações são heurísticas, determinísticas e ainda exigem revisão humana antes de uso real na declaração.
 
 ---
 
 ## Fluxo real a partir de documentos brutos
 
-O projeto já possui um fluxo real inicial para processar arquivos em `inputs/raw/`.
+O projeto possui um fluxo real inicial para processar arquivos em `inputs/raw/`.
 
 Comando principal:
 
@@ -246,7 +287,7 @@ outputs/promoted_extractions/
 Etapas do fluxo:
 
 1. escaneia arquivos brutos;
-2. extrai texto de `.txt`, PDF pesquisável e imagem via OCR;
+2. extrai texto de `.txt`, PDF pesquisável, imagem via OCR e PDF escaneado via OCR por página;
 3. faz pré-triagem dos textos extraídos;
 4. gera extrações estruturadas em lote;
 5. valida os JSONs estruturados;
@@ -272,10 +313,6 @@ outputs/raw-inputs-manifest.json
 outputs/raw-inputs-manifest.report.md
 ```
 
-O manifesto informa nome do arquivo, extensão, tamanho, tipo bruto, se pode extrair texto e se exige OCR.
-
----
-
 ### Extração de texto e OCR
 
 ```bash
@@ -297,12 +334,11 @@ Comportamento atual:
 |---|---|
 | `.txt` | lê texto diretamente |
 | PDF pesquisável | tenta extrair texto com `pypdf` |
+| PDF escaneado | tenta converter páginas em imagens com `pdf2image` e aplicar OCR |
 | imagem | tenta OCR com Tesseract |
-| PDF escaneado/vazio | marca como `requires_ocr` se não extrair texto |
 | arquivo vazio | marca como `empty` |
 | extensão não suportada | marca como `unsupported` |
-
----
+| PDF/imagem inválido | marca como `requires_ocr` ou falha tratada com aviso |
 
 ### Classificação de texto
 
@@ -320,8 +356,6 @@ confidence
 scores
 matched_keywords
 ```
-
----
 
 ### Pré-triagem
 
@@ -344,12 +378,6 @@ ready
 blocked
 ```
 
-Quando `ready`, os textos analisados parecem aptos para avançar.
-
-Quando `blocked`, há documentos desconhecidos, baixa confiança ou documentos que precisam de revisão manual.
-
----
-
 ### Extração estruturada individual
 
 ```bash
@@ -364,9 +392,25 @@ python3 tools/extract_structured_from_text.py \
   outputs/manual_extracted/teste_recibo.json
 ```
 
-Atualmente a extração automática está implementada para `recibo_medico`.
+Exemplos:
 
----
+```bash
+python3 tools/extract_structured_from_text.py \
+  outputs/extracted_text/informe_pj_teste.txt \
+  outputs/manual_extracted/informe_pj_teste.json
+
+python3 tools/extract_structured_from_text.py \
+  outputs/extracted_text/plano_saude_teste.txt \
+  outputs/manual_extracted/plano_saude_teste.json
+
+python3 tools/extract_structured_from_text.py \
+  outputs/extracted_text/bem_veiculo_teste.txt \
+  outputs/manual_extracted/bem_veiculo_teste.json
+
+python3 tools/extract_structured_from_text.py \
+  outputs/extracted_text/bem_imovel_teste.txt \
+  outputs/manual_extracted/bem_imovel_teste.json
+```
 
 ### Extração estruturada em lote
 
@@ -383,16 +427,17 @@ outputs/structured-extractions-batch.json
 outputs/structured-extractions-batch.report.md
 ```
 
-O lote salva automaticamente apenas extrações suportadas.
-
-Atualmente:
+Atualmente o lote salva automaticamente estes tipos:
 
 ```text
-recibo_medico → salvo
-desconhecido/outros não implementados → requires_review
+recibo_medico
+informe_rendimentos_pj
+plano_saude
+bem_veiculo
+bem_imovel
 ```
 
----
+Tipos desconhecidos ou ainda não implementados são marcados como `requires_review`.
 
 ### Validação das extrações estruturadas
 
@@ -410,8 +455,6 @@ for f in outputs/structured_extractions/*.json; do
   python3 tools/validate_extracted.py "$f"
 done
 ```
-
----
 
 ### Promoção segura
 
@@ -485,17 +528,7 @@ Rodar:
 python3 tools/dev_check.py
 ```
 
-Executa:
-
-```text
-Validar configuração
-Limpar outputs
-Rodar pré-triagem de documentos
-Rodar projeto
-Rodar testes
-```
-
-Ao final, imprime resumo das etapas executadas.
+Executa uma checagem integrada do estado do projeto.
 
 ---
 
@@ -624,23 +657,28 @@ git push
 Já funciona:
 
 ```text
-TXT real                  → extração de texto
-PDF pesquisável           → extração com pypdf
-Imagem/print              → OCR com Tesseract
-Texto extraído            → classificação
-Recibo médico             → extração estruturada heurística
-JSON estruturado          → validação
-Extração sem revisão      → promoção segura
-Pipeline canônico         → consolidação a partir de inputs/extracted/
+TXT real                         → extração de texto
+PDF pesquisável                  → extração com pypdf
+Imagem/print                     → OCR com Tesseract
+PDF escaneado                    → fallback OCR por página com pdf2image + Tesseract
+Texto extraído                   → classificação
+Recibo médico                    → extração estruturada heurística
+Informe de rendimentos PJ        → extração estruturada heurística
+Plano de saúde                   → extração estruturada heurística
+Bem veículo                      → extração estruturada heurística
+Bem imóvel                       → extração estruturada heurística
+JSON estruturado                 → validação
+Extração sem revisão             → promoção segura
+Pipeline canônico                → consolidação a partir de inputs/extracted/
 ```
 
 Ainda precisa melhorar:
 
 ```text
 OCR de fotos ruins
-pré-processamento de imagem
-PDF escaneado multipágina
-extração estruturada para outros tipos de documento
+pré-processamento mais robusto de imagem
+PDF escaneado multipágina em cenários reais variados
+extração estruturada mais robusta para documentos reais
 revisão humana assistida
 integração final com Agno
 geração .DEC
@@ -648,17 +686,18 @@ geração .DEC
 
 ---
 
-## Próximos passos técnicos
+## Próximos passos técnicos recomendados
 
 Prioridade recomendada:
 
-1. melhorar OCR com pré-processamento de imagem;
-2. criar suporte a PDF escaneado multipágina;
-3. criar extração estruturada para `informe_rendimentos_pj`;
-4. criar extração estruturada para `plano_saude`;
-5. criar extração estruturada para `bem_veiculo` e `bem_imovel`;
-6. criar camada de revisão humana antes de copiar para `inputs/extracted/`;
-7. estudar formato `.DEC`.
+1. criar etapa de revisão humana assistida para `outputs/promoted_extractions/`;
+2. criar ferramenta para copiar extrações revisadas para `inputs/extracted/`;
+3. tornar `run_raw_flow.py` configurável por flags;
+4. melhorar OCR com pré-processamento mais robusto;
+5. testar PDF escaneado multipágina real;
+6. robustecer extrações heurísticas com mais padrões reais;
+7. integrar com Agno;
+8. estudar formato `.DEC`.
 
 ---
 
