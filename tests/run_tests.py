@@ -33,6 +33,7 @@ TEST_FILES = [
     "tests/unit/test_promote_structured_extractions.py",
     "tests/unit/test_export_dec_experimental.py",
     "tests/unit/test_project_status.py",
+    "tests/unit/test_prepare_raw_for_ocr.py",
 ]
 
 
