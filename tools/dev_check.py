@@ -3,9 +3,6 @@ import sys
 
 
 def run_command(title: str, command: list[str]) -> None:
-    """
-    Executa um comando de checagem de desenvolvimento.
-    """
     print("")
     print(f"==> {title}")
     print("$ " + " ".join(command))
@@ -20,9 +17,6 @@ def run_command(title: str, command: list[str]) -> None:
 
 
 def main() -> None:
-    """
-    Executa checagens principais do projeto.
-    """
     print("Iniciando checagem de desenvolvimento.")
 
     run_command(
