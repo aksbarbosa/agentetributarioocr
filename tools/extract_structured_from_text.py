@@ -216,6 +216,30 @@ def extract_patient_name(text: str) -> str | None:
     return name.upper()
 
 
+def extract_vehicle_plate(text: str) -> str | None:
+    """
+    Extrai placa de veículo nos padrões antigo ou Mercosul.
+    """
+    match = re.search(r"\b[A-Z]{3}[0-9][A-Z0-9][0-9]{2}\b", text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return match.group(0).upper()
+
+
+def extract_renavam(text: str) -> str | None:
+    """
+    Extrai RENAVAM com 9 a 11 dígitos.
+    """
+    match = re.search(r"RENAVAM\s*[:\-]?\s*(\d{9,11})", text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return only_digits(match.group(1))
+
+
 def make_field(value, confidence: str, source_hint: str) -> dict:
     """
     Cria campo no formato esperado pelo validador.
@@ -256,9 +280,6 @@ def build_requires_review(fields: dict) -> list[dict]:
 def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para recibo médico.
-
-    Esta função segue o contrato esperado por validate_extracted.py.
-    Campos não encontrados são incluídos com confidence low para revisão humana.
     """
     valor_centavos = parse_money_to_cents(text)
     cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
@@ -408,11 +429,10 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
         "requires_review": build_requires_review(fields),
     }
 
+
 def build_plano_saude_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para plano de saúde.
-
-    Segue o schema esperado por validate_extracted.py.
     """
     cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
     nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
@@ -496,6 +516,136 @@ def build_plano_saude_extraction(input_path: str, text: str) -> dict:
         "requires_review": build_requires_review(fields),
     }
 
+
+def build_bem_veiculo_extraction(input_path: str, text: str) -> dict:
+    """
+    Cria extração estruturada simples para bem veículo.
+    """
+    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+    nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
+    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
+
+    marca = extract_labeled_text_from_line(text, "MARCA")
+    modelo = extract_labeled_text_from_line(text, "MODELO")
+    veiculo = (
+        extract_labeled_text_from_line(text, "VEICULO")
+        or extract_labeled_text_from_line(text, "VEÍCULO")
+    )
+
+    ano_fabricacao = (
+        extract_year_by_label(text, "ANO FABRICACAO")
+        or extract_year_by_label(text, "ANO FABRICAÇÃO")
+        or extract_year_by_label(text, "ANO")
+    )
+
+    placa = extract_labeled_text_from_line(text, "PLACA") or extract_vehicle_plate(text)
+    renavam = extract_renavam(text)
+
+    data_aquisicao = (
+        extract_date_by_label(text, "DATA DE AQUISICAO")
+        or extract_date_by_label(text, "DATA DE AQUISIÇÃO")
+    )
+
+    valor_anterior = parse_money_by_label(text, "VALOR ANTERIOR")
+    valor_atual = (
+        parse_money_by_label(text, "VALOR ATUAL")
+        or parse_money_by_label(text, "VALOR DO BEM")
+        or parse_money_by_label(text, "VALOR")
+    )
+
+    descricao_value = None
+
+    if veiculo:
+        descricao_value = veiculo
+    elif marca and modelo:
+        descricao_value = f"{marca} {modelo}"
+    elif marca:
+        descricao_value = marca
+
+    if descricao_value and ano_fabricacao and placa:
+        descricao_value = f"Automóvel marca/modelo {descricao_value}, ano {ano_fabricacao}, placa {placa}"
+
+    fields = {
+        "cpf_declarante": make_field(
+            cpf_declarante,
+            "medium" if cpf_declarante else "low",
+            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+        ),
+        "nome_declarante": make_field(
+            nome_declarante,
+            "medium" if nome_declarante else "low",
+            "Extraído da linha DECLARANTE, quando disponível.",
+        ),
+        "data_nascimento": make_field(
+            data_nascimento,
+            "medium" if data_nascimento else "low",
+            "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
+        ),
+        "grupo_bem": make_field(
+            "02",
+            "medium",
+            "Inferido como grupo 02 para bens móveis.",
+        ),
+        "codigo_bem": make_field(
+            "01",
+            "medium",
+            "Inferido como código 01 para veículo automotor terrestre.",
+        ),
+        "descricao": make_field(
+            descricao_value,
+            "medium" if descricao_value else "low",
+            "Construído a partir de VEICULO, MARCA, MODELO, ANO e PLACA.",
+        ),
+        "valor_anterior": make_field(
+            valor_anterior,
+            "medium" if valor_anterior is not None else "low",
+            "Extraído da linha VALOR ANTERIOR, quando disponível.",
+        ),
+        "valor_atual": make_field(
+            valor_atual,
+            "medium" if valor_atual is not None else "low",
+            "Extraído da linha VALOR ATUAL, VALOR DO BEM ou VALOR.",
+        ),
+        "renavam": make_field(
+            renavam,
+            "medium" if renavam else "low",
+            "Extraído da linha RENAVAM.",
+        ),
+        "placa": make_field(
+            placa,
+            "medium" if placa else "low",
+            "Extraído da linha PLACA ou por padrão de placa.",
+        ),
+        "marca": make_field(
+            marca,
+            "medium" if marca else "low",
+            "Extraído da linha MARCA.",
+        ),
+        "modelo": make_field(
+            modelo,
+            "medium" if modelo else "low",
+            "Extraído da linha MODELO.",
+        ),
+        "ano_fabricacao": make_field(
+            ano_fabricacao,
+            "medium" if ano_fabricacao else "low",
+            "Extraído da linha ANO FABRICACAO, ANO FABRICAÇÃO ou ANO.",
+        ),
+        "data_aquisicao": make_field(
+            data_aquisicao,
+            "medium" if data_aquisicao else "low",
+            "Extraído da linha DATA DE AQUISICAO ou DATA DE AQUISIÇÃO.",
+        ),
+    }
+
+    return {
+        "source_file": input_path,
+        "document_type": "bem_veiculo",
+        "fields": fields,
+        "requires_review": build_requires_review(fields),
+    }
+
+
 def build_structured_extraction(input_path: str) -> dict:
     """
     Classifica o texto extraído e cria extração estruturada quando suportado.
@@ -514,6 +664,9 @@ def build_structured_extraction(input_path: str) -> dict:
 
     elif document_type == "plano_saude":
         extraction = build_plano_saude_extraction(str(path), text)
+
+    elif document_type == "bem_veiculo":
+        extraction = build_bem_veiculo_extraction(str(path), text)
 
     else:
         extraction = {

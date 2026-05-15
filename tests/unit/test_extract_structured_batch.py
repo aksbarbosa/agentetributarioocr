@@ -66,6 +66,16 @@ def test_should_save_extraction_plano_saude():
     assert should_save_extraction(response) is True
 
 
+def test_should_save_extraction_bem_veiculo():
+    response = {
+        "extraction": {
+            "document_type": "bem_veiculo",
+        }
+    }
+
+    assert should_save_extraction(response) is True
+
+
 def test_should_not_save_unknown_extraction():
     response = {
         "extraction": {
@@ -76,7 +86,7 @@ def test_should_not_save_unknown_extraction():
     assert should_save_extraction(response) is False
 
 
-def test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude():
+def test_build_batch_response_saves_supported_document_types():
     with tempfile.TemporaryDirectory() as temp_dir:
         input_dir = Path(temp_dir) / "texts"
         output_dir = Path(temp_dir) / "structured"
@@ -145,6 +155,29 @@ def test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude():
             encoding="utf-8",
         )
 
+        (input_dir / "bem_veiculo_teste.txt").write_text(
+            "\n".join(
+                [
+                    "DOCUMENTO DE VEICULO",
+                    "",
+                    "DECLARANTE: JOSE DA SILVA",
+                    "CPF DO DECLARANTE: 11122233344",
+                    "DATA DE NASCIMENTO: 01011980",
+                    "",
+                    "VEICULO: HONDA CIVIC EXL",
+                    "MARCA: HONDA",
+                    "MODELO: CIVIC EXL",
+                    "ANO FABRICACAO: 2020",
+                    "PLACA: ABC1D23",
+                    "RENAVAM: 12345678901",
+                    "DATA DE AQUISICAO: 20082020",
+                    "VALOR ANTERIOR: R$ 80000,00",
+                    "VALOR ATUAL: R$ 85000,00",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
         (input_dir / "desconhecido.txt").write_text(
             "Texto aleatorio sem palavras fiscais reconhecidas.",
             encoding="utf-8",
@@ -152,26 +185,30 @@ def test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude():
 
         response = build_batch_response(str(input_dir), str(output_dir))
 
-        assert response["total_files"] == 4
-        assert response["summary"]["saved_count"] == 3
+        assert response["total_files"] == 5
+        assert response["summary"]["saved_count"] == 4
         assert response["summary"]["requires_review_count"] == 1
 
         assert response["summary"]["by_document_type"]["recibo_medico"] == 1
         assert response["summary"]["by_document_type"]["informe_rendimentos_pj"] == 1
         assert response["summary"]["by_document_type"]["plano_saude"] == 1
+        assert response["summary"]["by_document_type"]["bem_veiculo"] == 1
         assert response["summary"]["by_document_type"]["desconhecido"] == 1
 
         recibo_file = output_dir / "teste_recibo.json"
         informe_file = output_dir / "informe_pj_teste.json"
         plano_file = output_dir / "plano_saude_teste.json"
+        veiculo_file = output_dir / "bem_veiculo_teste.json"
 
         assert recibo_file.exists()
         assert informe_file.exists()
         assert plano_file.exists()
+        assert veiculo_file.exists()
 
         recibo_data = json.loads(recibo_file.read_text(encoding="utf-8"))
         informe_data = json.loads(informe_file.read_text(encoding="utf-8"))
         plano_data = json.loads(plano_file.read_text(encoding="utf-8"))
+        veiculo_data = json.loads(veiculo_file.read_text(encoding="utf-8"))
 
         assert recibo_data["document_type"] == "recibo_medico"
         assert recibo_data["fields"]["valor_pago"]["value"] == 30000
@@ -191,6 +228,18 @@ def test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude():
         assert plano_data["fields"]["valor_pago"]["value"] == 240000
         assert plano_data["fields"]["valor_nao_dedutivel"]["value"] == 0
         assert plano_data["fields"]["descricao"]["value"] == "PLANO DE SAUDE"
+
+        assert veiculo_data["document_type"] == "bem_veiculo"
+        assert veiculo_data["fields"]["grupo_bem"]["value"] == "02"
+        assert veiculo_data["fields"]["codigo_bem"]["value"] == "01"
+        assert veiculo_data["fields"]["renavam"]["value"] == "12345678901"
+        assert veiculo_data["fields"]["placa"]["value"] == "ABC1D23"
+        assert veiculo_data["fields"]["marca"]["value"] == "HONDA"
+        assert veiculo_data["fields"]["modelo"]["value"] == "CIVIC EXL"
+        assert veiculo_data["fields"]["ano_fabricacao"]["value"] == "2020"
+        assert veiculo_data["fields"]["data_aquisicao"]["value"] == "20082020"
+        assert veiculo_data["fields"]["valor_anterior"]["value"] == 8000000
+        assert veiculo_data["fields"]["valor_atual"]["value"] == 8500000
 
 
 def test_extract_structured_batch_cli_outputs():
@@ -264,6 +313,29 @@ def test_extract_structured_batch_cli_outputs():
             encoding="utf-8",
         )
 
+        (input_dir / "bem_veiculo_teste.txt").write_text(
+            "\n".join(
+                [
+                    "DOCUMENTO DE VEICULO",
+                    "",
+                    "DECLARANTE: JOSE DA SILVA",
+                    "CPF DO DECLARANTE: 11122233344",
+                    "DATA DE NASCIMENTO: 01011980",
+                    "",
+                    "VEICULO: HONDA CIVIC EXL",
+                    "MARCA: HONDA",
+                    "MODELO: CIVIC EXL",
+                    "ANO FABRICACAO: 2020",
+                    "PLACA: ABC1D23",
+                    "RENAVAM: 12345678901",
+                    "DATA DE AQUISICAO: 20082020",
+                    "VALOR ANTERIOR: R$ 80000,00",
+                    "VALOR ATUAL: R$ 85000,00",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
         result = subprocess.run(
             [
                 sys.executable,
@@ -284,30 +356,34 @@ def test_extract_structured_batch_cli_outputs():
 
         data = json.loads(output_json.read_text(encoding="utf-8"))
 
-        assert data["total_files"] == 3
-        assert data["summary"]["saved_count"] == 3
+        assert data["total_files"] == 4
+        assert data["summary"]["saved_count"] == 4
         assert data["summary"]["requires_review_count"] == 0
 
         assert data["summary"]["by_document_type"]["recibo_medico"] == 1
         assert data["summary"]["by_document_type"]["informe_rendimentos_pj"] == 1
         assert data["summary"]["by_document_type"]["plano_saude"] == 1
+        assert data["summary"]["by_document_type"]["bem_veiculo"] == 1
 
         report_text = output_report.read_text(encoding="utf-8")
 
         assert "# Relatório de extração estruturada em lote" in report_text
-        assert "Extrações salvas: 3" in report_text
+        assert "Extrações salvas: 4" in report_text
         assert "Arquivos que exigem revisão: 0" in report_text
         assert "`recibo_medico`: 1" in report_text
         assert "`informe_rendimentos_pj`: 1" in report_text
         assert "`plano_saude`: 1" in report_text
+        assert "`bem_veiculo`: 1" in report_text
 
         recibo_file = output_dir / "teste_recibo.json"
         informe_file = output_dir / "informe_pj_teste.json"
         plano_file = output_dir / "plano_saude_teste.json"
+        veiculo_file = output_dir / "bem_veiculo_teste.json"
 
         assert recibo_file.exists()
         assert informe_file.exists()
         assert plano_file.exists()
+        assert veiculo_file.exists()
 
 
 def run_tests():
@@ -316,8 +392,9 @@ def run_tests():
     test_should_save_extraction_recibo_medico()
     test_should_save_extraction_informe_rendimentos_pj()
     test_should_save_extraction_plano_saude()
+    test_should_save_extraction_bem_veiculo()
     test_should_not_save_unknown_extraction()
-    test_build_batch_response_saves_recibo_medico_informe_pj_and_plano_saude()
+    test_build_batch_response_saves_supported_document_types()
     test_extract_structured_batch_cli_outputs()
     print("test_extract_structured_batch.py: todos os testes passaram.")
 
