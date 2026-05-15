@@ -19,6 +19,10 @@ COMMANDS = {
         "description": "Continua o fluxo após revisão manual conforme a estratégia OCR.",
         "command": [sys.executable, "tools/continue_after_ocr_strategy_review.py"],
     },
+    "review": {
+        "description": "Abre revisão interativa do pacote manual conforme a estratégia OCR.",
+        "command": [sys.executable, "tools/review_ocr_strategy_pack.py"],
+    },
     "check": {
         "description": "Roda validações e testes do projeto.",
         "command": [sys.executable, "tools/dev_check.py"],
@@ -47,6 +51,7 @@ def print_help() -> None:
     print("python3 tools/irpf_ocr.py status")
     print("python3 tools/irpf_ocr.py run")
     print("python3 tools/irpf_ocr.py continue")
+    print("python3 tools/irpf_ocr.py review")
     print("python3 tools/irpf_ocr.py check")
 
 
