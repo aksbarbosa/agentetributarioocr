@@ -78,7 +78,10 @@ def generate_markdown_report(response: dict) -> str:
         return "\n".join(lines)
 
     for item in response["results"]:
-        lines.append(f"- `{Path(item['source_path']).name}` → `{item['destination_path']}` — `{item['document_type']}`")
+        source_name = Path(item["source_path"]).name
+        lines.append(
+            f"- `{source_name}` → `{item['destination_path']}` — `{item['document_type']}`"
+        )
 
     return "\n".join(lines)
 
@@ -111,7 +114,10 @@ def parse_args(argv: list[str]) -> tuple[str, str, str, str, bool]:
     print("Uso:")
     print("python3 tools/approve_promoted_extractions.py")
     print("python3 tools/approve_promoted_extractions.py --json")
-    print("python3 tools/approve_promoted_extractions.py review.json output_dir output.json output.report.md")
+    print(
+        "python3 tools/approve_promoted_extractions.py "
+        "review.json output_dir output.json output.report.md"
+    )
     sys.exit(1)
 
 
