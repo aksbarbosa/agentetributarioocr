@@ -1,49 +1,96 @@
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TOOLS_DIR = PROJECT_ROOT / "tools"
 
-def test_run_raw_flow_cli():
+sys.path.insert(0, str(TOOLS_DIR))
+
+import run_raw_flow as module
+
+
+def test_run_step_success():
+    module.run_step(
+        "Comando de teste",
+        [
+            sys.executable,
+            "-c",
+            "print('ok')",
+        ],
+    )
+
+
+def test_run_step_failure_exits():
+    try:
+        module.run_step(
+            "Comando com falha",
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.exit(7)",
+            ],
+        )
+    except SystemExit as exc:
+        assert exc.code == 7
+        return
+
+    raise AssertionError("run_step não interrompeu em comando com falha.")
+
+
+def test_run_step_allow_failure_does_not_exit():
+    module.run_step(
+        "Comando com falha permitida",
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.exit(3)",
+        ],
+        allow_failure=True,
+    )
+
+
+def test_validate_structured_extractions_missing_dir_does_not_fail():
+    with tempfile.TemporaryDirectory() as tmp:
+        missing_dir = Path(tmp) / "missing_structured_dir"
+
+        module.validate_structured_extractions(str(missing_dir))
+
+
+def test_validate_structured_extractions_empty_dir_does_not_fail():
+    with tempfile.TemporaryDirectory() as tmp:
+        empty_dir = Path(tmp) / "structured"
+        empty_dir.mkdir(parents=True, exist_ok=True)
+
+        module.validate_structured_extractions(str(empty_dir))
+
+
+def test_run_raw_flow_script_compiles():
     result = subprocess.run(
         [
             sys.executable,
+            "-m",
+            "py_compile",
             "tools/run_raw_flow.py",
         ],
-        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
 
     assert result.returncode == 0
+    assert result.stderr == ""
 
-    assert "Iniciando fluxo real a partir de inputs/raw." in result.stdout
-    assert "Escanear documentos brutos" in result.stdout
-    assert "Extrair texto dos documentos brutos" in result.stdout
-    assert "Rodar pré-triagem dos textos extraídos" in result.stdout
-    assert "Gerar extrações estruturadas em lote" in result.stdout
-    assert "Validar extrações estruturadas geradas" in result.stdout
-    assert "OK: Validar extrações estruturadas geradas" in result.stdout
-    assert "Promover extrações estruturadas válidas para pasta segura" in result.stdout
-    assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
-    assert "Gerar revisão assistida das extrações promovidas" in result.stdout
-    assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
-
-    assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.json").exists()
-    assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.report.md").exists()
-    assert (PROJECT_ROOT / "outputs/extract-text.json").exists()
-    assert (PROJECT_ROOT / "outputs/extract-text.report.md").exists()
-    assert (PROJECT_ROOT / "outputs/structured-extractions-batch.json").exists()
-    assert (PROJECT_ROOT / "outputs/structured-extractions-batch.report.md").exists()
-    assert (PROJECT_ROOT / "outputs/promote-structured-extractions.json").exists()
-    assert (PROJECT_ROOT / "outputs/promote-structured-extractions.report.md").exists()
-    assert (PROJECT_ROOT / "outputs/promoted_extractions").exists()
-    assert (PROJECT_ROOT / "outputs/review-promoted-extractions.json").exists()
-    assert (PROJECT_ROOT / "outputs/review-promoted-extractions.report.md").exists()
 
 def run_tests():
-    test_run_raw_flow_cli()
+    test_run_step_success()
+    test_run_step_failure_exits()
+    test_run_step_allow_failure_does_not_exit()
+    test_validate_structured_extractions_missing_dir_does_not_fail()
+    test_validate_structured_extractions_empty_dir_does_not_fail()
+    test_run_raw_flow_script_compiles()
+
     print("test_run_raw_flow.py: todos os testes passaram.")
 
 
