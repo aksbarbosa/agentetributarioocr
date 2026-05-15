@@ -19,6 +19,81 @@ DEFAULT_OUTPUT_JSON = "outputs/irpf-consolidado.json"
 DEFAULT_OUTPUT_REPORT = "outputs/irpf-consolidado.report.md"
 
 
+def deduplicate_items_by_key(items: list[dict], key_fields: list[str]) -> list[dict]:
+    """
+    Remove itens duplicados preservando a primeira ocorrência.
+    """
+    seen = set()
+    unique = []
+
+    for item in items:
+        key = tuple(item.get(field) for field in key_fields)
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique.append(item)
+
+    return unique
+
+
+def deduplicate_consolidated_records(consolidated: dict) -> dict:
+    """
+    Remove duplicidades óbvias do JSON consolidado.
+
+    Esta etapa é aplicada depois da junção dos canônicos individuais.
+    Ela evita que o mesmo documento entre duplicado por causa de OCR normal,
+    OCR pré-processado ou arquivos repetidos.
+    """
+    consolidated["pagamentos"] = deduplicate_items_by_key(
+        consolidated.get("pagamentos", []),
+        [
+            "codigo",
+            "descricao",
+            "beneficiario_cpf_cnpj",
+            "beneficiario_nome",
+            "beneficiario_tipo",
+            "tipo_documento",
+            "valor_pago",
+            "valor_nao_dedutivel",
+            "data_pagamento",
+        ],
+    )
+
+    rendimentos = consolidated.get("rendimentos", {})
+    rendimentos["tributaveis_pj"] = deduplicate_items_by_key(
+        rendimentos.get("tributaveis_pj", []),
+        [
+            "cnpj_pagador",
+            "nome_pagador",
+            "rendimento_total",
+            "previdencia_oficial",
+            "decimo_terceiro",
+            "irrf",
+            "irrf_13",
+            "beneficiario",
+        ],
+    )
+    consolidated["rendimentos"] = rendimentos
+
+    consolidated["bens"] = deduplicate_items_by_key(
+        consolidated.get("bens", []),
+        [
+            "tipo_bem",
+            "grupo",
+            "codigo",
+            "descricao",
+            "valor_anterior",
+            "valor_atual",
+            "data_aquisicao",
+            "beneficiario",
+        ],
+    )
+
+    return consolidated
+
+
 def load_config(config_path: str) -> dict:
     """
     Carrega o arquivo de configuração do projeto.
@@ -340,6 +415,8 @@ def run_batch_pipeline(
 
     Path(output_json_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_report_path).parent.mkdir(parents=True, exist_ok=True)
+
+    consolidated = deduplicate_consolidated_records(consolidated)
 
     save_json(consolidated, output_json_path)
 
