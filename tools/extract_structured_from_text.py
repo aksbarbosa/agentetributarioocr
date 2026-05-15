@@ -52,6 +52,54 @@ def parse_money_by_label(text: str, label: str) -> int | None:
     return int(reais) * 100 + int(centavos)
 
 
+def parse_all_money_to_cents(text: str) -> list[int]:
+    """
+    Extrai todos os valores monetários com R$ do texto e converte para centavos.
+
+    Aceita:
+    R$10
+    R$ 100
+    R$ 50,00
+    R$ 1.250,50
+    R$ 290%
+    """
+    values = []
+
+    money_pattern = re.compile(
+        r"R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{2}))?",
+        flags=re.IGNORECASE,
+    )
+
+    for match in money_pattern.finditer(text):
+        reais = match.group(1).replace(".", "")
+        centavos = match.group(2) or "00"
+
+        try:
+            values.append(int(reais) * 100 + int(centavos))
+        except ValueError:
+            continue
+
+    return values
+
+
+def parse_total_money_from_text(text: str) -> int | None:
+    """
+    Tenta extrair o valor total do documento.
+
+    Estratégia:
+    - considera apenas valores precedidos por R$;
+    - evita capturar telefone, CEP e outros números soltos;
+    - prioriza o maior valor monetário encontrado, pois em recibos simples
+      o total costuma ser maior que os itens individuais.
+    """
+    values = parse_all_money_to_cents(text)
+
+    if values:
+        return max(values)
+
+    return parse_money_to_cents(text)
+
+
 def extract_cpf_from_text(text: str) -> str | None:
     """
     Extrai o primeiro CPF encontrado no texto.
@@ -142,6 +190,42 @@ def extract_labeled_text_from_line(text: str, label: str) -> str | None:
     return None
 
 
+def extract_value_after_label(text: str, label: str) -> str | None:
+    """
+    Extrai o valor da linha seguinte a um rótulo.
+
+    Exemplo:
+    Nome do Paciente
+    Ana Silva
+    """
+    lines = [line.strip() for line in text.splitlines()]
+
+    for index, line in enumerate(lines):
+        if re.fullmatch(label, line, flags=re.IGNORECASE):
+            for next_line in lines[index + 1:]:
+                if next_line:
+                    return next_line.upper()
+
+    return None
+
+
+def extract_date_after_label(text: str, label: str) -> str | None:
+    """
+    Extrai data da linha seguinte a um rótulo.
+    """
+    value = extract_value_after_label(text, label)
+
+    if not value:
+        return None
+
+    match = re.search(r"\d{2}[\/\-]?\d{2}[\/\-]?\d{4}", value)
+
+    if not match:
+        return None
+
+    return only_digits(match.group(0))
+
+
 def extract_numeric_text_by_label(text: str, label: str) -> str | None:
     """
     Extrai texto numérico associado a um rótulo.
@@ -200,9 +284,15 @@ def extract_crm_from_text(text: str) -> str | None:
 def extract_professional_name(text: str) -> str | None:
     """
     Extrai nome do profissional em padrões simples.
-
-    Evita capturar o cabeçalho "RECIBO MEDICO" como se fosse o nome.
     """
+    name_after_label = (
+        extract_value_after_label(text, r"Nome do Médico")
+        or extract_value_after_label(text, r"Nome do Medico")
+    )
+
+    if name_after_label:
+        return name_after_label
+
     lines = text.splitlines()
 
     for line in lines:
@@ -240,6 +330,11 @@ def extract_patient_name(text: str) -> str | None:
     """
     Extrai nome do paciente em padrões simples.
     """
+    name_after_label = extract_value_after_label(text, r"Nome do Paciente")
+
+    if name_after_label:
+        return name_after_label
+
     match = re.search(
         r"PACIENTE\s*[:\-]?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ ]+)",
         text,
@@ -320,16 +415,43 @@ def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para recibo médico.
     """
-    valor_centavos = parse_money_to_cents(text)
+    valor_centavos = parse_total_money_from_text(text)
+
     cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+
     cpf_profissional = (
         extract_labeled_cpf_from_text(text, "CPF DO PROFISSIONAL")
         or extract_cpf_from_text(text)
     )
+
     data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
-    data_pagamento = extract_date_by_label(text, "DATA DO PAGAMENTO")
+
+    data_pagamento = (
+        extract_date_by_label(text, "DATA DO PAGAMENTO")
+        or extract_date_by_label(text, "DATA")
+        or extract_date_after_label(text, r"Data")
+    )
+
     nome_profissional = extract_professional_name(text)
     nome_paciente = extract_patient_name(text)
+
+    descricao_value = (
+        "CONSULTA MEDICA"
+        if "CONSULTA" in text.upper()
+        else "SERVICOS MEDICOS"
+    )
+
+    descricao_confidence = (
+        "medium"
+        if (
+            "CONSULTA" in text.upper()
+            or "SERVIÇO" in text.upper()
+            or "SERVICO" in text.upper()
+            or "RECIBO MÉDICO" in text.upper()
+            or "RECIBO MEDICO" in text.upper()
+        )
+        else "low"
+    )
 
     fields = {
         "cpf_declarante": make_field(
@@ -355,22 +477,22 @@ def build_recibo_medico_extraction(input_path: str, text: str) -> dict:
         "nome_prestador": make_field(
             nome_profissional,
             "medium" if nome_profissional else "low",
-            "Extraído da linha iniciada por MEDICO, MÉDICO, DR ou DRA.",
+            "Extraído da linha iniciada por MEDICO, MÉDICO, DR, DRA ou Nome do Médico.",
         ),
         "valor_pago": make_field(
             valor_centavos,
             "medium" if valor_centavos is not None else "low",
-            "Extraído do primeiro valor monetário encontrado no texto.",
+            "Extraído do valor total do recibo, quando disponível.",
         ),
         "data_pagamento": make_field(
             data_pagamento,
             "medium" if data_pagamento else "low",
-            "Extraído da linha DATA DO PAGAMENTO, quando disponível.",
+            "Extraído da linha DATA DO PAGAMENTO ou DATA, quando disponível.",
         ),
         "descricao": make_field(
-            "CONSULTA MEDICA",
-            "medium" if "CONSULTA" in text.upper() else "low",
-            "Inferido a partir da ocorrência de CONSULTA no texto.",
+            descricao_value,
+            descricao_confidence,
+            "Inferido a partir de CONSULTA, SERVIÇO/SERVICO ou RECIBO MEDICO no texto.",
         ),
     }
 
