@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+import re
 
 
 def collect_json_files(input_dir: str) -> list[Path]:
@@ -25,6 +26,106 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+
+
+def only_digits(value) -> str:
+    """
+    Mantém apenas dígitos.
+    """
+    return re.sub(r"\D", "", str(value or ""))
+
+
+def is_valid_cpf(value) -> bool:
+    """
+    Valida CPF pelo dígito verificador.
+    """
+    cpf = only_digits(value)
+
+    if len(cpf) != 11:
+        return False
+
+    if cpf == cpf[0] * 11:
+        return False
+
+    total = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    digit_1 = (total * 10) % 11
+    if digit_1 == 10:
+        digit_1 = 0
+
+    total = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    digit_2 = (total * 10) % 11
+    if digit_2 == 10:
+        digit_2 = 0
+
+    return cpf[-2:] == f"{digit_1}{digit_2}"
+
+
+def is_valid_cnpj(value) -> bool:
+    """
+    Valida CNPJ pelo dígito verificador.
+    """
+    cnpj = only_digits(value)
+
+    if len(cnpj) != 14:
+        return False
+
+    if cnpj == cnpj[0] * 14:
+        return False
+
+    weights_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    weights_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+    total = sum(int(cnpj[i]) * weights_1[i] for i in range(12))
+    remainder = total % 11
+    digit_1 = 0 if remainder < 2 else 11 - remainder
+
+    total = sum(int(cnpj[i]) * weights_2[i] for i in range(13))
+    remainder = total % 11
+    digit_2 = 0 if remainder < 2 else 11 - remainder
+
+    return cnpj[-2:] == f"{digit_1}{digit_2}"
+
+
+def identifier_review_reason(field_name: str, value) -> str | None:
+    """
+    Retorna motivo de revisão para CPF/CNPJ inválido.
+    """
+    if value in {None, ""}:
+        return None
+
+    digits = only_digits(value)
+
+    cpf_fields = {
+        "cpf_declarante",
+    }
+
+    cnpj_fields = {
+        "cnpj_pagador",
+        "cnpj_operadora",
+    }
+
+    cpf_or_cnpj_fields = {
+        "cpf_cnpj_prestador",
+        "beneficiario_cpf_cnpj",
+    }
+
+    if field_name in cpf_fields and not is_valid_cpf(digits):
+        return "CPF inválido"
+
+    if field_name in cnpj_fields and not is_valid_cnpj(digits):
+        return "CNPJ inválido"
+
+    if field_name in cpf_or_cnpj_fields:
+        if len(digits) == 11 and not is_valid_cpf(digits):
+            return "CPF inválido"
+        if len(digits) == 14 and not is_valid_cnpj(digits):
+            return "CNPJ inválido"
+        if len(digits) not in {11, 14}:
+            return "CPF/CNPJ inválido"
+
+    return None
+
+
 def review_field(field_name: str, field_data: dict) -> dict:
     """
     Resume a revisão de um campo.
@@ -43,6 +144,12 @@ def review_field(field_name: str, field_data: dict) -> dict:
     if confidence == "low":
         needs_review = True
         reasons.append("baixa confiança")
+
+    identifier_reason = identifier_review_reason(field_name, value)
+
+    if identifier_reason:
+        needs_review = True
+        reasons.append(identifier_reason)
 
     return {
         "field": field_name,

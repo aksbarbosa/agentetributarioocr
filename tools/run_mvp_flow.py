@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import shutil
 from pathlib import Path
 
 
@@ -34,6 +35,13 @@ def main() -> None:
         "Rodar fluxo bruto com OCR, extração estruturada, promoção e revisão",
         [sys.executable, "tools/run_raw_flow.py"],
     )
+
+    approved_dir = Path("outputs/approved_test")
+
+    if approved_dir.exists():
+        shutil.rmtree(approved_dir)
+
+    approved_dir.mkdir(parents=True, exist_ok=True)
 
     run_step(
         "Aprovar extrações promovidas para pasta segura",
