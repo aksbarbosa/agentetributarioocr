@@ -39,3 +39,12 @@ __pycache__/
 *.pyc
 .DS_Store
 .venv/
+
+# Local real-document test folders
+inputs/raw_test_*/
+outputs/*_test_*
+outputs/*-test-*
+outputs/approved_test*
+outputs/promoted_test*
+outputs/structured_extractions_test*
+outputs/extracted_text_test*
