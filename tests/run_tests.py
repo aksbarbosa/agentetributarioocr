@@ -41,6 +41,7 @@ TEST_FILES = [
     "tests/unit/test_ocr_strategy_status.py",
     "tests/unit/test_irpf_ocr.py",
     "tests/unit/test_install_git_hooks.py",
+    "tests/unit/test_setup_project.py",
 ]
 
 
