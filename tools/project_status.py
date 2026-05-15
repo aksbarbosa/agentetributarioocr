@@ -2,6 +2,9 @@ import json
 from pathlib import Path
 
 
+OCR_CONFIG_PATH = Path("config/ocr_config.json")
+
+
 PATHS = {
     "review_json": Path("outputs/review-promoted-extractions.json"),
     "manual_pack": Path("outputs/manual-review-pack.json"),
@@ -28,6 +31,27 @@ def count_json_files(path: Path) -> int:
         return 0
 
     return len(list(path.glob("*.json")))
+
+
+
+def get_ocr_config_summary() -> dict:
+    """
+    Lê resumo da configuração OCR, quando existir.
+    """
+    data = load_json(OCR_CONFIG_PATH)
+
+    if not data:
+        return {}
+
+    preprocessing = data.get("preprocessing", {})
+    selection = data.get("selection", {})
+
+    return {
+        "ocr_strategy": data.get("ocr_strategy"),
+        "preprocessing_enabled": preprocessing.get("enabled"),
+        "selection_method": selection.get("method"),
+        "prefer_original_on_tie": selection.get("prefer_original_on_tie"),
+    }
 
 
 def get_manual_pending_count() -> int:
@@ -96,6 +120,7 @@ def main() -> None:
     pending_count = get_manual_pending_count()
     approved_count = count_json_files(PATHS["approved_dir"])
     review_summary = get_review_summary()
+    ocr_config = get_ocr_config_summary()
 
     print("Status do projeto IRPF OCR DEC")
     print("")
@@ -108,6 +133,14 @@ def main() -> None:
 
     if review_summary:
         print(f"- Resumo da revisão assistida: {review_summary}")
+
+    if ocr_config:
+        print("")
+        print("Configuração OCR:")
+        print(f"- Estratégia: {ocr_config.get('ocr_strategy')}")
+        print(f"- Pré-processamento ativo: {ocr_config.get('preprocessing_enabled')}")
+        print(f"- Método de seleção: {ocr_config.get('selection_method')}")
+        print(f"- Preferir OCR normal em empate: {ocr_config.get('prefer_original_on_tie')}")
 
     print("")
     print("Arquivos principais:")
