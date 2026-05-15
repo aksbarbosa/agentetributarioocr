@@ -26,6 +26,9 @@ DEC_EXPERIMENTAL_REPORT = "outputs/irpf-export-dec-experimental.report.md"
 
 
 def run_step(title: str, command: list[str]) -> None:
+    """
+    Executa uma etapa obrigatória do fluxo pós-revisão.
+    """
     print("")
     print(f"==> {title}")
     print("$ " + " ".join(command))
@@ -40,8 +43,14 @@ def run_step(title: str, command: list[str]) -> None:
 
 
 def run_review_pack_step() -> int:
+    """
+    Gera novamente o pacote de revisão manual.
+
+    Se ainda houver pendências, generate_manual_review_pack.py retorna código 1.
+    """
     print("")
     print("==> Gerar novo pacote de revisão manual")
+
     command = [
         sys.executable,
         "tools/generate_manual_review_pack.py",
@@ -49,6 +58,7 @@ def run_review_pack_step() -> int:
         MANUAL_REVIEW_PACK_JSON,
         MANUAL_REVIEW_PACK_REPORT,
     ]
+
     print("$ " + " ".join(command))
 
     result = subprocess.run(command)
@@ -62,6 +72,9 @@ def run_review_pack_step() -> int:
 
 
 def load_json(path: str) -> dict:
+    """
+    Carrega JSON se existir.
+    """
     file_path = Path(path)
 
     if not file_path.exists():
@@ -71,6 +84,9 @@ def load_json(path: str) -> dict:
 
 
 def get_pending_review_count() -> int:
+    """
+    Lê a quantidade de campos pendentes no pacote de revisão manual.
+    """
     data = load_json(MANUAL_REVIEW_PACK_JSON)
     summary = data.get("summary", {})
 
@@ -78,6 +94,9 @@ def get_pending_review_count() -> int:
 
 
 def clean_approved_dir() -> None:
+    """
+    Limpa a pasta de aprovados antes de gerar nova aprovação.
+    """
     if APPROVED_DIR.exists():
         shutil.rmtree(APPROVED_DIR)
 
@@ -85,6 +104,18 @@ def clean_approved_dir() -> None:
 
 
 def main() -> None:
+    """
+    Continua o fluxo depois que o usuário preencheu manual-review-pack.json.
+
+    Fluxo:
+    1. aplica correções manuais nos JSONs promovidos;
+    2. revisa novamente;
+    3. gera novo pacote de revisão;
+    4. se ainda houver pendências, para;
+    5. se não houver pendências, aprova;
+    6. gera JSON canônico;
+    7. gera exportação DEC experimental.
+    """
     print("Continuando fluxo após revisão manual.")
 
     run_step(
