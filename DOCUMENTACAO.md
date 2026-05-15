@@ -2,7 +2,7 @@
 
 ## 1. Visão geral
 
-O IRPF OCR DEC é um MVP local para transformar documentos fiscais em dados estruturados revisáveis, consolidar essas informações em um JSON canônico de IRPF e gerar uma exportação experimental pré-DEC.
+O projeto IRPF OCR DEC é um MVP local para transformar documentos fiscais em dados estruturados revisáveis, consolidar essas informações em um JSON canônico de IRPF e gerar uma exportação experimental pré-DEC.
 
 O projeto ainda não gera `.DEC` oficial compatível com o PGD da Receita Federal.
 
@@ -19,36 +19,77 @@ Aplicação de correções manuais: funcional
 Exportação experimental pré-DEC: funcional
 Estratégia OCR configurável: funcional
 Fluxo best OCR: funcional/experimental
+Interface unificada: funcional
+Makefile: funcional
+CI GitHub Actions: funcional/em validação
 Geração oficial .DEC: não implementada
 ```
 
 ---
 
-## 3. Interface principal
+## 3. Interface operacional principal
 
-Comandos principais:
+A interface principal do projeto é:
 
 ```bash
-python3 tools/ocr_strategy_status.py
-python3 tools/run_ocr_strategy.py
-python3 tools/continue_after_ocr_strategy_review.py
+python3 tools/irpf_ocr.py <comando>
 ```
 
-### `ocr_strategy_status.py`
+Comandos disponíveis:
 
-Mostra a estratégia OCR configurada em `config/ocr_config.json`.
+```bash
+python3 tools/irpf_ocr.py setup
+python3 tools/irpf_ocr.py status
+python3 tools/irpf_ocr.py project-status
+python3 tools/irpf_ocr.py run
+python3 tools/irpf_ocr.py continue
+python3 tools/irpf_ocr.py check
+```
 
-### `run_ocr_strategy.py`
+Significado:
 
-Executa o fluxo definido em `config/ocr_config.json`.
-
-### `continue_after_ocr_strategy_review.py`
-
-Continua o fluxo depois da revisão manual conforme a estratégia configurada.
+```text
+setup           configura o projeto, instala hooks e roda checagens
+status          mostra a estratégia OCR configurada
+project-status  mostra estado dos outputs e próximo passo provável
+run             executa o fluxo definido em config/ocr_config.json
+continue        continua depois da revisão manual conforme estratégia OCR
+check           roda validações e testes
+```
 
 ---
 
-## 4. Configuração OCR
+## 4. Atalhos via Makefile
+
+O projeto possui `Makefile` com atalhos para os comandos mais usados:
+
+```bash
+make setup
+make status
+make project-status
+make run
+make continue
+make check
+make test
+make safety
+```
+
+Equivalências:
+
+```text
+make setup          → python3 tools/irpf_ocr.py setup
+make status         → python3 tools/irpf_ocr.py status
+make project-status → python3 tools/irpf_ocr.py project-status
+make run            → python3 tools/irpf_ocr.py run
+make continue       → python3 tools/irpf_ocr.py continue
+make check          → python3 tools/irpf_ocr.py check
+make test           → python3 tests/run_tests.py
+make safety         → python3 tools/check_repo_safety.py
+```
+
+---
+
+## 5. Configuração OCR
 
 Arquivo:
 
@@ -67,23 +108,47 @@ best
 Mapeamento:
 
 ```text
-normal   → run_mvp_flow.py
-prepared → run_prepared_raw_flow.py
-best     → run_best_mvp_flow.py
+normal   → tools/run_mvp_flow.py
+prepared → tools/run_prepared_raw_flow.py
+best     → tools/run_best_mvp_flow.py
 ```
 
 Continuação pós-revisão:
 
 ```text
-normal → continue_after_manual_review.py
-best   → continue_after_best_manual_review.py
+normal → tools/continue_after_manual_review.py
+best   → tools/continue_after_best_manual_review.py
 ```
 
 A estratégia `prepared` ainda não possui continuação canônica completa.
 
+Validação:
+
+```bash
+python3 tools/validate_ocr_config.py
+```
+
+Status:
+
+```bash
+python3 tools/ocr_strategy_status.py
+```
+
+Execução da estratégia configurada:
+
+```bash
+python3 tools/run_ocr_strategy.py
+```
+
+Continuação conforme estratégia configurada:
+
+```bash
+python3 tools/continue_after_ocr_strategy_review.py
+```
+
 ---
 
-## 5. Fluxo geral normal
+## 6. Fluxo geral normal
 
 ```text
 inputs/raw/
@@ -100,13 +165,13 @@ inputs/raw/
 → export_dec_experimental.py
 ```
 
-Comando:
+Comando principal:
 
 ```bash
 python3 tools/run_mvp_flow.py
 ```
 
-Continuação:
+Continuação após revisão:
 
 ```bash
 python3 tools/continue_after_manual_review.py
@@ -114,7 +179,7 @@ python3 tools/continue_after_manual_review.py
 
 ---
 
-## 6. Fluxo OCR preparado
+## 7. Fluxo OCR preparado
 
 ```text
 inputs/raw/
@@ -136,7 +201,7 @@ Esse fluxo é útil para testar se pré-processamento melhora o OCR.
 
 ---
 
-## 7. Fluxo best OCR
+## 8. Fluxo best OCR
 
 ```text
 OCR normal
@@ -161,7 +226,7 @@ MVP completo best:
 python3 tools/run_best_mvp_flow.py
 ```
 
-Continuação best:
+Continuação após revisão best:
 
 ```bash
 python3 tools/continue_after_best_manual_review.py
@@ -169,7 +234,7 @@ python3 tools/continue_after_best_manual_review.py
 
 ---
 
-## 8. Seleção de melhor OCR
+## 9. Seleção de melhor OCR
 
 Scripts:
 
@@ -184,17 +249,23 @@ Critério atual:
 longest_text
 ```
 
+Isto é, o texto com maior número de caracteres é selecionado.
+
 Em empate, a configuração atual prefere o OCR normal:
 
 ```json
 "prefer_original_on_tie": true
 ```
 
+Observação técnica: esse critério é heurístico. Texto mais longo não garante necessariamente texto semanticamente melhor, mas é uma boa aproximação inicial para comparar OCR normal e OCR pré-processado.
+
 ---
 
-## 9. Revisão humana
+## 10. Revisão humana
 
-Pacotes:
+A revisão humana é central para segurança.
+
+Pacotes principais:
 
 ```text
 outputs/manual-review-pack.json
@@ -208,31 +279,47 @@ Campos pendentes devem ser preenchidos assim:
 "status": "resolved"
 ```
 
-Depois roda-se a continuação correspondente.
+Depois roda-se a continuação correspondente:
+
+```bash
+python3 tools/irpf_ocr.py continue
+```
+
+ou:
+
+```bash
+make continue
+```
 
 ---
 
-## 10. Validações
+## 11. Validações
 
-Configuração principal:
+### Configuração principal
 
 ```bash
 python3 tools/validate_config.py config/project_config.json
 ```
 
-Configuração OCR:
+### Configuração OCR
 
 ```bash
 python3 tools/validate_ocr_config.py
 ```
 
-Testes:
+### Segurança do repositório
+
+```bash
+python3 tools/check_repo_safety.py
+```
+
+### Testes
 
 ```bash
 python3 tests/run_tests.py
 ```
 
-Checagem completa:
+### Checagem completa
 
 ```bash
 python3 tools/dev_check.py
@@ -244,11 +331,88 @@ O `dev_check.py` deve executar:
 validate_config.py
 validate_ocr_config.py
 tests/run_tests.py
+check_repo_safety.py
 ```
 
 ---
 
-## 11. Tipos suportados
+## 12. CI / GitHub Actions
+
+O CI está definido em:
+
+```text
+.github/workflows/ci.yml
+```
+
+Etapas executadas:
+
+```text
+checkout
+setup Python
+instalação de dependências OCR
+instalação de requirements.txt
+validação da configuração principal
+validação da configuração OCR
+checagem de segurança do repositório
+testes unitários
+dev_check.py
+```
+
+A falha do CI deve bloquear a evolução até ser corrigida.
+
+---
+
+## 13. Segurança do repositório
+
+O projeto possui proteção para evitar commit acidental de documentos reais e artefatos de OCR.
+
+Arquivos e pastas bloqueados:
+
+```text
+inputs/raw/
+inputs/raw_test_*/
+inputs/raw_ignored/
+inputs/private/
+inputs/real/
+outputs/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.webp
+*.dec
+*.DEC
+```
+
+Checagem:
+
+```bash
+python3 tools/check_repo_safety.py
+```
+
+Instalação de hook local:
+
+```bash
+python3 tools/install_git_hooks.py
+```
+
+Hook versionado:
+
+```text
+scripts/git-hooks/pre-commit
+```
+
+Destino local:
+
+```text
+.git/hooks/pre-commit
+```
+
+---
+
+## 14. Document types suportados
 
 ```text
 recibo_medico
@@ -262,12 +426,12 @@ Documentos desconhecidos são bloqueados.
 
 ---
 
-## 12. Melhorias implementadas
+## 15. Melhorias recentes implementadas
 
 ```text
-- run_project.py aceita input_dir customizado.
-- run_mvp_flow.py bloqueia canônico inválido.
-- review_promoted_extractions.py valida CPF/CNPJ.
+- run_project.py passou a aceitar input_dir customizado.
+- run_mvp_flow.py passou a bloquear canônico inválido.
+- review_promoted_extractions.py passou a validar CPF/CNPJ.
 - generate_manual_review_pack.py cria pacote de revisão humana.
 - apply_manual_review_pack.py aplica correções manuais.
 - continue_after_manual_review.py continua fluxo após revisão.
@@ -281,11 +445,16 @@ Documentos desconhecidos são bloqueados.
 - config/ocr_config.json centraliza a estratégia OCR.
 - run_ocr_strategy.py executa a estratégia configurada.
 - continue_after_ocr_strategy_review.py continua conforme a estratégia configurada.
+- irpf_ocr.py fornece interface unificada.
+- Makefile fornece atalhos operacionais.
+- check_repo_safety.py protege contra arquivos sensíveis rastreados.
+- install_git_hooks.py instala hook local de segurança.
+- GitHub Actions executa validações e testes no push/pull request.
 ```
 
 ---
 
-## 13. Saídas principais
+## 16. Saídas principais
 
 ### Normal
 
@@ -316,65 +485,78 @@ outputs/select-best-ocr-outputs.report.md
 
 ---
 
-## 14. Decisões técnicas
+## 17. Decisões técnicas
 
-### Bloqueio conservador
+### Decisão 1 — Bloqueio conservador
 
 O projeto deve parar diante de dados incertos, em vez de gerar canônico/exportação com dados ruins.
 
-### Revisão humana obrigatória
+### Decisão 2 — Revisão humana obrigatória
 
 Campos ausentes, baixa confiança ou CPF/CNPJ inválidos exigem revisão.
 
-### Exportação DEC ainda experimental
+### Decisão 3 — Exportação DEC ainda experimental
 
 A exportação atual não é oficial e não deve ser importada no PGD.
 
-### OCR best é experimental
+### Decisão 4 — OCR best é experimental
 
-A seleção por maior texto é heurística e ainda não garante melhor qualidade semântica.
+A seleção por maior texto é heurística, útil para comparação, mas ainda não garante melhor qualidade semântica.
 
-### Configuração centralizada
+### Decisão 5 — Configuração centralizada
 
 A estratégia OCR deve ser controlada por `config/ocr_config.json`.
 
+### Decisão 6 — Segurança por padrão
+
+Documentos reais, imagens, PDFs, outputs e `.DEC` não devem ser rastreados pelo Git.
+
 ---
 
-## 15. Uso diário recomendado
+## 18. Comandos recomendados no uso diário
 
 Ver estratégia:
 
 ```bash
-python3 tools/ocr_strategy_status.py
+python3 tools/irpf_ocr.py status
 ```
 
 Executar fluxo:
 
 ```bash
-python3 tools/run_ocr_strategy.py
+python3 tools/irpf_ocr.py run
 ```
 
 Se parar para revisão, editar o pacote indicado e depois rodar:
 
 ```bash
-python3 tools/continue_after_ocr_strategy_review.py
+python3 tools/irpf_ocr.py continue
 ```
 
 Checar projeto:
 
 ```bash
-python3 tools/dev_check.py
+python3 tools/irpf_ocr.py check
+```
+
+Atalhos equivalentes:
+
+```bash
+make status
+make run
+make continue
+make check
 ```
 
 ---
 
-## 16. Limitações atuais
+## 19. Limitações atuais
 
 ```text
 - Não gera .DEC oficial.
 - Não garante compatibilidade com PGD.
 - OCR ainda pode falhar com imagem ruim.
-- Extração heurística depende dos padrões textuais.
+- Extração heurística ainda depende dos padrões textuais.
 - Melhor OCR por comprimento não garante melhor interpretação.
 - Ainda falta modo interativo para revisão manual.
 - Ainda falta estudo detalhado do layout .DEC real.
@@ -382,21 +564,22 @@ python3 tools/dev_check.py
 
 ---
 
-## 17. Próximas etapas técnicas
+## 20. Próximas etapas técnicas
 
 ```text
-1. Criar testes adicionais para fluxos best.
-2. Usar config/ocr_config.json dentro dos scripts de pré-processamento.
-3. Criar modo interativo para preencher manual-review-pack.
-4. Melhorar extração de dados de imóveis reais.
-5. Criar fixtures reais anonimizadas.
-6. Estudar layout .DEC real.
-7. Evoluir exportador experimental para registros mais próximos do formato oficial.
+1. Atualizar README e DOCUMENTACAO continuamente.
+2. Criar testes adicionais para fluxos best.
+3. Usar config/ocr_config.json dentro dos scripts de pré-processamento.
+4. Criar modo interativo para preencher manual-review-pack.
+5. Melhorar extração de dados de imóveis reais.
+6. Criar fixtures reais anonimizadas.
+7. Estudar layout .DEC real.
+8. Evoluir exportador experimental para registros mais próximos do formato oficial.
 ```
 
 ---
 
-## 18. Estado esperado antes de commit
+## 21. Estado esperado antes de commit
 
 Antes de qualquer commit importante:
 
@@ -404,6 +587,7 @@ Antes de qualquer commit importante:
 python3 tools/validate_ocr_config.py
 python3 tests/run_tests.py
 python3 tools/dev_check.py
+python3 tools/check_repo_safety.py
 ```
 
 Se passar:
