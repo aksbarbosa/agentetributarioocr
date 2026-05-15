@@ -31,6 +31,7 @@ TEST_FILES = [
     "tests/unit/test_run_raw_flow.py",
     "tests/unit/test_extract_structured_batch.py",
     "tests/unit/test_promote_structured_extractions.py",
+    "tests/unit/test_export_dec_experimental.py",
 ]
 
 
