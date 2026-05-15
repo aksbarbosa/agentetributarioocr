@@ -55,6 +55,16 @@ def main() -> None:
             "outputs/approved_test",
         ],
     )
+    run_step(
+    "Gerar exportação DEC experimental",
+    [
+        sys.executable,
+        "tools/export_dec_experimental.py",
+        "outputs/irpf-consolidado.json",
+        "outputs/irpf-export-dec-experimental.txt",
+        "outputs/irpf-export-dec-experimental.report.md",
+    ],
+)
 
     print("")
     print("Fluxo MVP completo finalizado.")
@@ -67,6 +77,8 @@ def main() -> None:
     print("- outputs/approve-promoted-extractions.report.md")
     print("- outputs/irpf-consolidado.json")
     print("- outputs/irpf-consolidado.report.md")
+    print("- outputs/irpf-export-dec-experimental.txt")
+    print("- outputs/irpf-export-dec-experimental.report.md")
 
 
 if __name__ == "__main__":
