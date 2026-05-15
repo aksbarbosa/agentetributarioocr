@@ -36,10 +36,6 @@ def parse_money_to_cents(text: str) -> int | None:
 def parse_money_by_label(text: str, label: str) -> int | None:
     """
     Extrai valor monetário associado a um rótulo específico.
-
-    Exemplos:
-    VALOR PAGO: R$ 2400,00 -> 240000
-    VALOR TOTAL DA NOTA FISCAL: R$ 908,00 -> 90800
     """
     pattern = rf"{label}\s*[:\-]?\s*(?:R\$\s*)?(\d{{1,3}}(?:\.\d{{3}})*|\d+),(\d{{2}})"
     match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -56,13 +52,6 @@ def parse_money_by_label(text: str, label: str) -> int | None:
 def parse_all_money_to_cents(text: str) -> list[int]:
     """
     Extrai todos os valores monetários com R$ do texto e converte para centavos.
-
-    Aceita:
-    R$10
-    R$ 100
-    R$ 50,00
-    R$ 1.250,50
-    R$ 290%
     """
     values = []
 
@@ -86,12 +75,6 @@ def parse_all_money_to_cents(text: str) -> list[int]:
 def parse_total_money_from_text(text: str) -> int | None:
     """
     Tenta extrair o valor total do documento.
-
-    Estratégia:
-    - considera apenas valores precedidos por R$;
-    - evita capturar telefone, CEP e outros números soltos;
-    - prioriza o maior valor monetário encontrado, pois em recibos simples
-      o total costuma ser maior que os itens individuais.
     """
     values = parse_all_money_to_cents(text)
 
@@ -106,6 +89,22 @@ def extract_cpf_from_text(text: str) -> str | None:
     Extrai o primeiro CPF encontrado no texto.
     """
     match = re.search(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b", text)
+
+    if not match:
+        return None
+
+    return only_digits(match.group(0))
+
+
+def extract_first_cpf_from_text(text: str) -> str | None:
+    """
+    Extrai o primeiro CPF encontrado no texto, tolerando OCR com vírgula/espaço.
+    """
+    match = re.search(
+        r"\b\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2}\b",
+        text,
+        flags=re.IGNORECASE,
+    )
 
     if not match:
         return None
@@ -153,66 +152,6 @@ def extract_first_cnpj_from_text(text: str) -> str | None:
         return None
 
     return only_digits(match.group(0))
-
-
-
-
-def extract_first_cpf_from_text(text: str) -> str | None:
-    """
-    Extrai o primeiro CPF encontrado no texto.
-    """
-    match = re.search(
-        r"\b\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2}\b",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    if not match:
-        return None
-
-    return only_digits(match.group(0))
-
-
-def extract_informe_pagador(text: str) -> tuple[str | None, str | None]:
-    """
-    Extrai CNPJ e nome da fonte pagadora em informe de rendimentos.
-    """
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-
-    for index, line in enumerate(lines):
-        cnpj_match = re.search(
-            r"(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})\s+(.+)$",
-            line,
-            flags=re.IGNORECASE,
-        )
-
-        if cnpj_match:
-            cnpj = only_digits(cnpj_match.group(1))
-            nome = cnpj_match.group(2).strip().upper()
-            return cnpj, nome
-
-    return None, None
-
-
-def extract_informe_beneficiario(text: str) -> tuple[str | None, str | None]:
-    """
-    Extrai CPF e nome do beneficiário em informe de rendimentos.
-    """
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-
-    for line in lines:
-        cpf_match = re.search(
-            r"(\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2})\s+(.+)$",
-            line,
-            flags=re.IGNORECASE,
-        )
-
-        if cpf_match:
-            cpf = only_digits(cpf_match.group(1))
-            nome = cpf_match.group(2).strip().upper()
-            return cpf, nome
-
-    return None, None
 
 
 def extract_date_by_label(text: str, label: str) -> str | None:
@@ -326,7 +265,7 @@ def extract_cep_by_label(text: str, label: str) -> str | None:
     if not match:
         return None
 
-    return match.group(1)
+    return only_digits(match.group(1))
 
 
 def extract_uf_by_label(text: str, label: str) -> str | None:
@@ -464,6 +403,7 @@ def extract_unimed_operator_name(text: str) -> str | None:
             line,
             flags=re.IGNORECASE,
         )
+
         if match:
             value = match.group(1).strip()
             if value:
@@ -474,6 +414,183 @@ def extract_unimed_operator_name(text: str) -> str | None:
             return line.strip().upper()
 
     return None
+
+
+def extract_informe_pagador(text: str) -> tuple[str | None, str | None]:
+    """
+    Extrai CNPJ e nome da fonte pagadora em informe de rendimentos.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    for line in lines:
+        cnpj_match = re.search(
+            r"(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})\s+(.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+
+        if cnpj_match:
+            cnpj = only_digits(cnpj_match.group(1))
+            nome = cnpj_match.group(2).strip().upper()
+            return cnpj, nome
+
+    return None, None
+
+
+def extract_informe_beneficiario(text: str) -> tuple[str | None, str | None]:
+    """
+    Extrai CPF e nome do beneficiário em informe de rendimentos.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    for line in lines:
+        cpf_match = re.search(
+            r"(\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2})\s+(.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+
+        if cpf_match:
+            cpf = only_digits(cpf_match.group(1))
+            nome = cpf_match.group(2).strip().upper()
+            return cpf, nome
+
+    return None, None
+
+
+def extract_line_containing(text: str, keywords: list[str]) -> str | None:
+    """
+    Retorna a primeira linha que contém alguma das palavras-chave.
+    """
+    for line in text.splitlines():
+        clean = line.strip()
+
+        if not clean:
+            continue
+
+        upper = clean.upper()
+
+        for keyword in keywords:
+            if keyword.upper() in upper:
+                return clean.upper()
+
+    return None
+
+
+def extract_area_util(text: str) -> str | None:
+    """
+    Extrai área útil em textos de matrícula de imóvel.
+    """
+    match = re.search(
+        r"ÁREA\s+ÚTIL\s+PRIVATIVA\s+DE\s+([\d\.,]+)\s*M",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        match = re.search(
+            r"AREA\s+UTIL\s+PRIVATIVA\s+DE\s+([\d\.,]+)\s*M",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    if not match:
+        match = re.search(
+            r"ÁREA\s+ÚTIL\s+.*?DE\s+([\d\.,]+)\s*M",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    if not match:
+        return None
+
+    return match.group(1).replace(",", ".").strip()
+
+
+def extract_area_total(text: str) -> str | None:
+    """
+    Extrai área total em textos de matrícula de imóvel.
+    """
+    match = re.search(
+        r"ÁREA\s+TOTAL\s+DE\s+([\d\.,]+)\s*M",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        match = re.search(
+            r"AREA\s+TOTAL\s+DE\s+([\d\.,]+)\s*M",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    if not match:
+        return None
+
+    return match.group(1).replace(",", ".").strip()
+
+
+def extract_fracao_ideal(text: str) -> str | None:
+    """
+    Extrai fração ideal em textos de matrícula.
+    """
+    match = re.search(
+        r"FRA[CÇ][AÃ]O\s+IDEAL\s+DE\s+([\d\.,]+)\s*%",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    return match.group(1).replace(",", ".").strip()
+
+
+def build_matricula_imovel_description(text: str) -> str | None:
+    """
+    Monta descrição para matrícula antiga de imóvel quando não há campos
+    estruturados como logradouro, CEP, IPTU e valor.
+    """
+    upper = text.upper()
+
+    is_matricula = (
+        "UNIDADE AUTÔNOMA" in upper
+        or "UNIDADE AUTONOMA" in upper
+        or "REGISTRO DE IMÓVEIS" in upper
+        or "REGISTRO DE IMOVEIS" in upper
+        or "OFICIAL DE REGISTRO DE IMÓVEIS" in upper
+        or "OFICIAL DE REGISTRO DE IMOVEIS" in upper
+        or "MATRÍCULA" in upper
+        or "MATRICULA" in upper
+    )
+
+    if not is_matricula:
+        return None
+
+    parts = ["UNIDADE AUTONOMA CONSTANTE EM MATRICULA DE REGISTRO DE IMOVEIS"]
+
+    if "JARDIM AMÉRICA" in upper or "JARDIM AMERICA" in upper:
+        parts.append("LOCALIZADA NO 20 SUBDISTRITO JARDIM AMERICA")
+
+    if "GARAGEM" in upper:
+        parts.append("COM VAGA DE GARAGEM")
+
+    area_util = extract_area_util(text)
+
+    if area_util:
+        parts.append(f"AREA UTIL PRIVATIVA DE {area_util} M2")
+
+    area_total = extract_area_total(text)
+
+    if area_total:
+        parts.append(f"AREA TOTAL DE {area_total} M2")
+
+    fracao_ideal = extract_fracao_ideal(text)
+
+    if fracao_ideal:
+        parts.append(f"FRACAO IDEAL DE {fracao_ideal}%")
+
+    return ", ".join(parts)
 
 
 def make_field(value, confidence: str, source_hint: str) -> dict:
@@ -968,6 +1085,9 @@ def build_bem_veiculo_extraction(input_path: str, text: str) -> dict:
 def build_bem_imovel_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para bem imóvel.
+
+    Também cobre matrículas antigas de registro de imóveis quando não há
+    campos fiscais completos como CEP, IPTU, valor do bem etc.
     """
     cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
     nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
@@ -1039,6 +1159,9 @@ def build_bem_imovel_extraction(input_path: str, text: str) -> dict:
 
     descricao_value = ", ".join(descricao_parts) if descricao_parts else None
 
+    if not descricao_value:
+        descricao_value = build_matricula_imovel_description(text)
+
     fields = {
         "cpf_declarante": make_field(
             cpf_declarante,
@@ -1068,7 +1191,7 @@ def build_bem_imovel_extraction(input_path: str, text: str) -> dict:
         "descricao": make_field(
             descricao_value,
             "medium" if descricao_value else "low",
-            "Construído a partir de IMOVEL, LOGRADOURO, NUMERO, BAIRRO, MUNICIPIO e UF.",
+            "Construído a partir de endereço ou, quando ausente, de matrícula/registro de imóveis.",
         ),
         "valor_anterior": make_field(
             valor_anterior,
