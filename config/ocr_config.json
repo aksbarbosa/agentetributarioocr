@@ -1,0 +1,26 @@
+{
+  "ocr_strategy": "best",
+  "paths": {
+    "raw_input_dir": "inputs/raw",
+    "prepared_input_dir": "outputs/raw_prepared_for_ocr",
+    "extracted_text_dir": "outputs/extracted_text",
+    "extracted_text_prepared_dir": "outputs/extracted_text_prepared",
+    "extracted_text_best_dir": "outputs/extracted_text_best"
+  },
+  "preprocessing": {
+    "enabled": true,
+    "scale_factor": 2,
+    "contrast_factor": 1.8,
+    "sharpness_factor": 1.5,
+    "binarization_threshold": 180
+  },
+  "selection": {
+    "method": "longest_text",
+    "prefer_original_on_tie": true
+  },
+  "safety": {
+    "allow_partial_preprocessing_errors": true,
+    "allow_preflight_failure": true,
+    "require_manual_review_for_invalid_identifiers": true
+  }
+}
