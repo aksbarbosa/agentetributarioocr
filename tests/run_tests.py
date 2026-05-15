@@ -38,6 +38,7 @@ TEST_FILES = [
     "tests/unit/test_validate_ocr_config.py",
     "tests/unit/test_run_ocr_strategy.py",
     "tests/unit/test_continue_after_ocr_strategy_review.py",
+    "tests/unit/test_ocr_strategy_status.py",
 ]
 
 
