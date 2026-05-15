@@ -3,6 +3,10 @@ import sys
 
 
 COMMANDS = {
+    "setup": {
+        "description": "Configura o projeto localmente, instala hooks e roda checagens.",
+        "command": [sys.executable, "tools/setup_project.py"],
+    },
     "status": {
         "description": "Mostra a estratégia OCR configurada e o próximo fluxo.",
         "command": [sys.executable, "tools/ocr_strategy_status.py"],
@@ -39,6 +43,7 @@ def print_help() -> None:
 
     print("")
     print("Exemplos:")
+    print("python3 tools/irpf_ocr.py setup")
     print("python3 tools/irpf_ocr.py status")
     print("python3 tools/irpf_ocr.py run")
     print("python3 tools/irpf_ocr.py continue")
