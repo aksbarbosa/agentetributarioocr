@@ -27,6 +27,9 @@ PROMOTE_REPORT = "outputs/promote-structured-extractions-prepared.report.md"
 REVIEW_JSON = "outputs/review-promoted-extractions-prepared.json"
 REVIEW_REPORT = "outputs/review-promoted-extractions-prepared.report.md"
 
+COMPARE_JSON = "outputs/compare-ocr-outputs.json"
+COMPARE_REPORT = "outputs/compare-ocr-outputs.report.md"
+
 
 def run_step(title: str, command: list[str], allow_failure: bool = False) -> None:
     print("")
@@ -158,6 +161,19 @@ def main() -> None:
         ],
     )
 
+    run_step(
+        "Comparar OCR normal e OCR preparado",
+        [
+            sys.executable,
+            "tools/compare_ocr_outputs.py",
+            "outputs/extracted_text",
+            EXTRACTED_TEXT_DIR,
+            COMPARE_JSON,
+            COMPARE_REPORT,
+        ],
+        allow_failure=True,
+    )
+
     print("")
     print("Fluxo com documentos preparados para OCR finalizado.")
     print("")
@@ -168,6 +184,7 @@ def main() -> None:
     print(f"- {STRUCTURED_REPORT}")
     print(f"- {PROMOTE_REPORT}")
     print(f"- {REVIEW_REPORT}")
+    print(f"- {COMPARE_REPORT}")
     print(f"- {EXTRACTED_TEXT_DIR}/")
     print(f"- {STRUCTURED_DIR}/")
     print(f"- {PROMOTED_DIR}/")
