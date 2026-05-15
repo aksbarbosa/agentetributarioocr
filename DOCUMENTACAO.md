@@ -1,661 +1,416 @@
-# Documentação do Projeto — Skill IRPF OCR DEC
+# Documentação Técnica — IRPF OCR DEC
 
-## 1. Objetivo do projeto
+## 1. Visão geral
 
-Este projeto tem como objetivo construir uma skill/agente para auxiliar na geração da Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos digitalizados.
+O IRPF OCR DEC é um MVP local para transformar documentos fiscais em dados estruturados revisáveis, consolidar essas informações em um JSON canônico de IRPF e gerar uma exportação experimental pré-DEC.
 
-A skill deverá ser capaz de:
-
-* receber documentos como PDFs, imagens e comprovantes;
-* classificar o tipo de documento;
-* extrair dados relevantes por OCR ou leitura assistida;
-* normalizar os dados extraídos;
-* validar CPF, CNPJ, valores, datas e campos obrigatórios;
-* gerar um JSON canônico revisável;
-* gerar um relatório humano em Markdown;
-* futuramente gerar um arquivo `.DEC` importável no PGD oficial da Receita Federal.
-
-A skill não deve substituir o PGD, contador ou revisão humana. Ela será um pré-processador inteligente para reduzir digitação manual e organizar os dados.
+O projeto ainda não gera `.DEC` oficial compatível com o PGD da Receita Federal.
 
 ---
 
-## 2. Filosofia do projeto
-
-A ideia central é não transformar diretamente documentos em `.DEC`.
-
-O fluxo correto é:
+## 2. Estado atual
 
 ```text
-Documentos reais
-    ↓
-OCR / extração
-    ↓
-Dados extraídos estruturados
-    ↓
-Normalização
-    ↓
-Validação
-    ↓
-JSON canônico revisável
-    ↓
-Relatório humano
-    ↓
-Revisão do usuário
-    ↓
-Geração experimental do .DEC
+Pipeline canônico: funcional
+Pipeline raw-to-structured: funcional
+OCR local com Tesseract: funcional
+Fluxo de revisão humana: funcional
+Aplicação de correções manuais: funcional
+Exportação experimental pré-DEC: funcional
+Estratégia OCR configurável: funcional
+Fluxo best OCR: funcional/experimental
+Geração oficial .DEC: não implementada
 ```
 
-A separação mais importante do projeto é:
+---
 
-### Parte probabilística
+## 3. Interface principal
 
-Inclui tudo que pode ter incerteza:
+Comandos principais:
 
-* OCR;
-* leitura de documentos;
-* classificação automática;
-* extração de campos;
-* interpretação de layout.
+```bash
+python3 tools/ocr_strategy_status.py
+python3 tools/run_ocr_strategy.py
+python3 tools/continue_after_ocr_strategy_review.py
+```
 
-### Parte determinística
+### `ocr_strategy_status.py`
 
-Inclui tudo que precisa ser previsível:
+Mostra a estratégia OCR configurada em `config/ocr_config.json`.
 
-* normalização;
-* validação;
-* cálculo;
-* geração do JSON canônico;
-* geração do relatório;
-* futuramente serialização do `.DEC`.
+### `run_ocr_strategy.py`
 
-O OCR pode errar. Por isso, os dados passam por validação e revisão humana antes de qualquer geração de `.DEC`.
+Executa o fluxo definido em `config/ocr_config.json`.
+
+### `continue_after_ocr_strategy_review.py`
+
+Continua o fluxo depois da revisão manual conforme a estratégia configurada.
 
 ---
 
-## 3. Escopo inicial
+## 4. Configuração OCR
 
-A primeira versão do projeto não tentará cobrir todos os casos de IRPF.
-
-O escopo inicial é:
-
-* declarante simples;
-* informe de rendimentos PJ;
-* recibos médicos, futuramente;
-* plano de saúde, futuramente;
-* bens simples, futuramente;
-* geração de JSON canônico;
-* validação local;
-* relatório humano.
-
-Nesta fase, o projeto ainda não gera `.DEC`.
-
-A primeira entrega prática é:
-
-> Ler dados estruturados ou extraídos, normalizar, validar e gerar um JSON canônico revisável com relatório humano.
-
----
-
-## 4. Estrutura atual do projeto
-
-A estrutura atual planejada/implementada é:
+Arquivo:
 
 ```text
-irpf_ocr_dec/
-├── README.md
-├── skill/
-│   ├── SKILL.md
-│   ├── instructions.md
-│   └── schemas/
-│       └── canonical_irpf_2026.json
-├── tools/
-│   ├── normalize.py
-│   ├── validate.py
-│   ├── check_json.py
-│   ├── report.py
-│   ├── pipeline.py
-│   └── build_canonical_json.py
-└── tests/
-    └── fixtures/
-        ├── assalariado_simples.json
-        └── extracted/
-            └── informe_pj_exemplo.json
+config/ocr_config.json
 ```
 
-Além disso, durante os testes, alguns arquivos de saída podem ser gerados na raiz do projeto:
+Estratégias aceitas:
 
 ```text
-irpf-gerado.json
-irpf-gerado.report.md
-assalariado_simples.report.md
-irpf-2026.report.md
+normal
+prepared
+best
+```
+
+Mapeamento:
+
+```text
+normal   → run_mvp_flow.py
+prepared → run_prepared_raw_flow.py
+best     → run_best_mvp_flow.py
+```
+
+Continuação pós-revisão:
+
+```text
+normal → continue_after_manual_review.py
+best   → continue_after_best_manual_review.py
+```
+
+A estratégia `prepared` ainda não possui continuação canônica completa.
+
+---
+
+## 5. Fluxo geral normal
+
+```text
+inputs/raw/
+→ extract_text.py
+→ preflight_documents.py
+→ extract_structured_batch.py
+→ validate_extracted.py
+→ promote_structured_extractions.py
+→ review_promoted_extractions.py
+→ generate_manual_review_pack.py
+→ apply_manual_review_pack.py
+→ approve_promoted_extractions.py
+→ run_project.py
+→ export_dec_experimental.py
+```
+
+Comando:
+
+```bash
+python3 tools/run_mvp_flow.py
+```
+
+Continuação:
+
+```bash
+python3 tools/continue_after_manual_review.py
 ```
 
 ---
 
-## 5. Componentes atuais
-
-### 5.1 `tools/normalize.py`
-
-Arquivo responsável por normalizar dados brutos.
-
-Funções já implementadas:
-
-```python
-only_digits()
-remove_accents()
-normalize_name()
-money_to_cents()
-normalize_date()
-```
-
-Exemplos de transformação:
+## 6. Fluxo OCR preparado
 
 ```text
-"123.456.789-09"  → "12345678909"
-"José da Silva"   → "JOSE DA SILVA"
-"R$ 85.000,00"    → 8500000
-"01/01/1980"      → "01011980"
+inputs/raw/
+→ prepare_raw_for_ocr.py
+→ outputs/raw_prepared_for_ocr/
+→ extract_text.py
+→ outputs/extracted_text_prepared/
+→ extract_structured_batch.py
+→ promoted/review prepared
 ```
 
-Essa camada será usada tanto nos dados vindos do OCR quanto nos dados editados manualmente.
+Comando:
+
+```bash
+python3 tools/run_prepared_raw_flow.py
+```
+
+Esse fluxo é útil para testar se pré-processamento melhora o OCR.
 
 ---
 
-### 5.2 `tools/validate.py`
+## 7. Fluxo best OCR
 
-Arquivo responsável por validar o JSON canônico e os dados principais.
-
-Funções já implementadas:
-
-```python
-validate_cpf()
-validate_cnpj()
-validate_required_fields()
-validate_canonical_irpf()
+```text
+OCR normal
+→ OCR preparado
+→ compare_ocr_outputs.py
+→ select_best_ocr_outputs.py
+→ outputs/extracted_text_best/
+→ extract_structured_batch.py
+→ promote
+→ review
 ```
 
-Validações atuais:
+Comando:
 
-* CPF do declarante;
-* CNPJ da fonte pagadora;
-* campos obrigatórios do declarante;
-* valores negativos;
-* IRRF maior que rendimento total.
+```bash
+python3 tools/run_best_ocr_flow.py
+```
 
-A saída da validação segue a ideia:
+MVP completo best:
+
+```bash
+python3 tools/run_best_mvp_flow.py
+```
+
+Continuação best:
+
+```bash
+python3 tools/continue_after_best_manual_review.py
+```
+
+---
+
+## 8. Seleção de melhor OCR
+
+Scripts:
+
+```text
+tools/compare_ocr_outputs.py
+tools/select_best_ocr_outputs.py
+```
+
+Critério atual:
+
+```text
+longest_text
+```
+
+Em empate, a configuração atual prefere o OCR normal:
 
 ```json
-{
-  "valid": true,
-  "errors": [],
-  "warnings": []
-}
+"prefer_original_on_tie": true
 ```
 
-Ou, em caso de erro:
+---
+
+## 9. Revisão humana
+
+Pacotes:
+
+```text
+outputs/manual-review-pack.json
+outputs/manual-review-pack-best.json
+```
+
+Campos pendentes devem ser preenchidos assim:
 
 ```json
-{
-  "valid": false,
-  "errors": [
-    {
-      "field": "declarante.cpf",
-      "message": "CPF inválido."
-    }
-  ],
-  "warnings": []
-}
+"suggested_value": "valor_corrigido",
+"status": "resolved"
 ```
+
+Depois roda-se a continuação correspondente.
 
 ---
 
-### 5.3 `tools/check_json.py`
+## 10. Validações
 
-Ferramenta simples para validar um arquivo JSON canônico pelo terminal.
-
-Uso:
+Configuração principal:
 
 ```bash
-python3 tools/check_json.py tests/fixtures/assalariado_simples.json
+python3 tools/validate_config.py config/project_config.json
 ```
 
-Ou:
+Configuração OCR:
 
 ```bash
-python3 tools/check_json.py irpf-gerado.json
+python3 tools/validate_ocr_config.py
 ```
 
-Ela carrega o arquivo, chama `validate_canonical_irpf()` e imprime o resultado no terminal.
-
----
-
-### 5.4 `tools/report.py`
-
-Arquivo responsável por gerar um relatório humano em Markdown.
-
-Ele recebe um JSON canônico e gera um arquivo `.report.md` contendo:
-
-* aviso de revisão humana;
-* dados do declarante;
-* status da validação;
-* erros encontrados;
-* avisos encontrados;
-* rendimentos tributáveis PJ;
-* pendências de revisão;
-* próximos passos.
-
-Exemplo de uso:
+Testes:
 
 ```bash
-python3 tools/report.py tests/fixtures/assalariado_simples.json irpf-2026.report.md
+python3 tests/run_tests.py
 ```
 
----
+Checagem completa:
 
-### 5.5 `tools/pipeline.py`
+```bash
+python3 tools/dev_check.py
+```
 
-Pipeline inicial do projeto.
-
-Atualmente ele faz:
+O `dev_check.py` deve executar:
 
 ```text
-JSON canônico
-    ↓
-Validação
-    ↓
-Relatório Markdown
+validate_config.py
+validate_ocr_config.py
+tests/run_tests.py
 ```
-
-Uso:
-
-```bash
-python3 tools/pipeline.py tests/fixtures/assalariado_simples.json
-```
-
-Ou:
-
-```bash
-python3 tools/pipeline.py irpf-gerado.json
-```
-
-Ele gera automaticamente um relatório com base no nome do arquivo de entrada.
 
 ---
 
-### 5.6 `tools/build_canonical_json.py`
-
-Arquivo responsável por transformar uma extração simulada em JSON canônico.
-
-Entrada atual:
+## 11. Tipos suportados
 
 ```text
-tests/fixtures/extracted/informe_pj_exemplo.json
+recibo_medico
+plano_saude
+informe_rendimentos_pj
+bem_imovel
+bem_veiculo
 ```
 
-Saída atual:
+Documentos desconhecidos são bloqueados.
+
+---
+
+## 12. Melhorias implementadas
 
 ```text
-irpf-gerado.json
+- run_project.py aceita input_dir customizado.
+- run_mvp_flow.py bloqueia canônico inválido.
+- review_promoted_extractions.py valida CPF/CNPJ.
+- generate_manual_review_pack.py cria pacote de revisão humana.
+- apply_manual_review_pack.py aplica correções manuais.
+- continue_after_manual_review.py continua fluxo após revisão.
+- export_dec_experimental.py gera exportação pré-DEC experimental.
+- preprocess_raw_images.py e prepare_raw_for_ocr.py ajudam em OCR ruim.
+- compare_ocr_outputs.py compara OCR normal vs preparado.
+- select_best_ocr_outputs.py escolhe melhor OCR.
+- run_best_ocr_flow.py roda pipeline best OCR até revisão.
+- run_best_mvp_flow.py tenta fechar MVP usando best OCR.
+- continue_after_best_manual_review.py continua o fluxo best após revisão.
+- config/ocr_config.json centraliza a estratégia OCR.
+- run_ocr_strategy.py executa a estratégia configurada.
+- continue_after_ocr_strategy_review.py continua conforme a estratégia configurada.
 ```
 
-Uso:
+---
 
-```bash
-python3 tools/build_canonical_json.py tests/fixtures/extracted/informe_pj_exemplo.json irpf-gerado.json
-```
+## 13. Saídas principais
 
-Esse arquivo simula o que futuramente será feito com dados vindos de OCR.
-
-O fluxo atual é:
+### Normal
 
 ```text
-extração simulada
-    ↓
-build_canonical_json.py
-    ↓
-irpf-gerado.json
-    ↓
-pipeline.py
-    ↓
-irpf-gerado.report.md
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/irpf-export-dec-experimental.txt
+outputs/irpf-export-dec-experimental.report.md
 ```
 
----
-
-## 6. JSON canônico
-
-O JSON canônico é o formato interno da declaração.
-
-Ele serve como contrato entre:
-
-* OCR;
-* normalização;
-* validação;
-* relatório;
-* futuramente builder `.DEC`.
-
-Exemplo mínimo atual:
-
-```json
-{
-  "$schema": "irpf-2026-v1",
-  "exercicio": 2026,
-  "ano_calendario": 2025,
-  "tipo_declaracao": "AJUSTE_ANUAL",
-  "modelo": "AUTO",
-  "declarante": {
-    "cpf": "12345678909",
-    "nome": "JOSE DA SILVA",
-    "data_nascimento": "01011980"
-  },
-  "rendimentos": {
-    "tributaveis_pj": [
-      {
-        "cnpj_pagador": "11222333000181",
-        "nome_pagador": "EMPRESA EXEMPLO LTDA",
-        "rendimento_total": 8500000,
-        "previdencia_oficial": 850000,
-        "decimo_terceiro": 700000,
-        "irrf": 425000,
-        "irrf_13": 35000,
-        "beneficiario": "TITULAR"
-      }
-    ]
-  },
-  "pagamentos": [],
-  "bens": [],
-  "dividas": [],
-  "avisos": [],
-  "requires_review": []
-}
-```
-
-Decisões importantes:
-
-* CPF e CNPJ ficam apenas com dígitos;
-* datas usam formato `DDMMAAAA`;
-* valores monetários ficam em centavos inteiros;
-* nomes são normalizados em maiúsculas e sem acentos nesta fase;
-* campos incertos devem entrar em `requires_review`.
-
----
-
-## 7. Extração simulada
-
-Antes de integrar OCR real, usamos uma estrutura simulada de extração.
-
-Exemplo:
-
-```json
-{
-  "document_type": "informe_rendimentos_pj",
-  "source_file": "informe_empresa_exemplo.pdf",
-  "fields": {
-    "cpf_declarante": {
-      "value": "123.456.789-09",
-      "confidence": "high",
-      "source_hint": "Página 1, identificação do beneficiário"
-    },
-    "rendimento_total": {
-      "value": "R$ 85.000,00",
-      "confidence": "high",
-      "source_hint": "Página 1, quadro 3, linha 1"
-    }
-  }
-}
-```
-
-Cada campo extraído deve conter:
-
-* `value`: valor bruto extraído;
-* `confidence`: nível de confiança;
-* `source_hint`: indicação de onde o dado veio.
-
-Valores possíveis de confiança:
+### Best OCR
 
 ```text
-high
-medium
-low
-missing
+outputs/irpf-consolidado-best.json
+outputs/irpf-consolidado-best.report.md
+outputs/irpf-export-dec-experimental-best.txt
+outputs/irpf-export-dec-experimental-best.report.md
 ```
 
-Campos com confiança `low` ou ausentes entram em `requires_review`.
-
----
-
-## 8. Estado atual do projeto
-
-Até agora já foi feito:
-
-* criação da estrutura básica de pastas;
-* implementação de normalizadores;
-* implementação de validadores de CPF e CNPJ;
-* criação de fixture de JSON canônico;
-* criação de ferramenta para validar JSON;
-* criação de relatório humano em Markdown;
-* criação de pipeline simples;
-* criação de extração simulada de informe PJ;
-* criação de builder para converter extração simulada em JSON canônico.
-
-Ainda não foi feito:
-
-* OCR real;
-* classificação automática de documentos;
-* suporte a recibo médico;
-* suporte a plano de saúde;
-* suporte a bens;
-* schema JSON formal completo;
-* builder `.DEC`;
-* parser reverso `.DEC`;
-* integração real com Agno.
-
----
-
-## 9. Comandos úteis atuais
-
-Entrar na pasta do projeto:
-
-```bash
-cd ~/Documents/irpf_ocr_dec
-```
-
-Rodar normalizadores manualmente:
-
-```bash
-python3 tools/normalize.py
-```
-
-Rodar validadores manualmente:
-
-```bash
-python3 tools/validate.py
-```
-
-Validar fixture canônico:
-
-```bash
-python3 tools/check_json.py tests/fixtures/assalariado_simples.json
-```
-
-Gerar relatório de um JSON canônico:
-
-```bash
-python3 tools/report.py tests/fixtures/assalariado_simples.json irpf-2026.report.md
-```
-
-Rodar pipeline com JSON canônico:
-
-```bash
-python3 tools/pipeline.py tests/fixtures/assalariado_simples.json
-```
-
-Gerar JSON canônico a partir da extração simulada:
-
-```bash
-python3 tools/build_canonical_json.py tests/fixtures/extracted/informe_pj_exemplo.json irpf-gerado.json
-```
-
-Rodar pipeline no JSON gerado:
-
-```bash
-python3 tools/pipeline.py irpf-gerado.json
-```
-
-Abrir pasta do projeto no Finder:
-
-```bash
-open .
-```
-
-Abrir relatório gerado:
-
-```bash
-open irpf-gerado.report.md
-```
-
----
-
-## 10. Próximas etapas
-
-### Próxima etapa imediata
-
-Criar um pipeline mais completo que aceite a extração simulada diretamente.
-
-Fluxo desejado:
+### Diagnóstico OCR
 
 ```text
-arquivo extraído
-    ↓
-gerar JSON canônico
-    ↓
-validar JSON
-    ↓
-gerar relatório
+outputs/compare-ocr-outputs.json
+outputs/compare-ocr-outputs.report.md
+outputs/select-best-ocr-outputs.json
+outputs/select-best-ocr-outputs.report.md
 ```
 
-Em vez de rodar dois comandos:
+---
+
+## 14. Decisões técnicas
+
+### Bloqueio conservador
+
+O projeto deve parar diante de dados incertos, em vez de gerar canônico/exportação com dados ruins.
+
+### Revisão humana obrigatória
+
+Campos ausentes, baixa confiança ou CPF/CNPJ inválidos exigem revisão.
+
+### Exportação DEC ainda experimental
+
+A exportação atual não é oficial e não deve ser importada no PGD.
+
+### OCR best é experimental
+
+A seleção por maior texto é heurística e ainda não garante melhor qualidade semântica.
+
+### Configuração centralizada
+
+A estratégia OCR deve ser controlada por `config/ocr_config.json`.
+
+---
+
+## 15. Uso diário recomendado
+
+Ver estratégia:
 
 ```bash
-python3 tools/build_canonical_json.py tests/fixtures/extracted/informe_pj_exemplo.json irpf-gerado.json
-python3 tools/pipeline.py irpf-gerado.json
+python3 tools/ocr_strategy_status.py
 ```
 
-Queremos futuramente rodar algo como:
+Executar fluxo:
 
 ```bash
-python3 tools/pipeline.py --from-extracted tests/fixtures/extracted/informe_pj_exemplo.json
+python3 tools/run_ocr_strategy.py
 ```
 
-ou criar outro comando específico.
+Se parar para revisão, editar o pacote indicado e depois rodar:
+
+```bash
+python3 tools/continue_after_ocr_strategy_review.py
+```
+
+Checar projeto:
+
+```bash
+python3 tools/dev_check.py
+```
 
 ---
 
-### Etapas futuras
-
-1. Melhorar o pipeline.
-2. Criar schema JSON formal.
-3. Adicionar suporte a recibo médico.
-4. Adicionar suporte a plano de saúde.
-5. Criar classificador simples de documentos.
-6. Simular OCR real com arquivos `.txt` ou `.json`.
-7. Integrar OCR real.
-8. Criar builder `.DEC` experimental.
-9. Criar parser reverso `.DEC`.
-10. Integrar tudo como skill/agente no Agno.
-
----
-
-## 11. Decisões técnicas registradas
-
-### 11.1 Não começar pelo `.DEC`
-
-A geração do `.DEC` será feita apenas depois que o JSON canônico estiver estável.
-
-Motivo:
-
-* o `.DEC` é sensível a leiaute, encoding, ordem de campos e hashes;
-* OCR é probabilístico;
-* o usuário precisa revisar os dados antes;
-* o builder `.DEC` deve ser determinístico.
-
-### 11.2 Valores monetários em centavos
-
-Todos os valores monetários do JSON canônico devem ser inteiros em centavos.
-
-Exemplo:
+## 16. Limitações atuais
 
 ```text
-R$ 85.000,00 → 8500000
-```
-
-Isso evita problemas de arredondamento com `float`.
-
-### 11.3 Revisão humana obrigatória
-
-Campos incertos, ausentes ou com baixa confiança não devem ser aceitos silenciosamente.
-
-Eles devem aparecer em:
-
-```json
-"requires_review": []
-```
-
-E depois no relatório humano.
-
-### 11.4 Separar skill de tools
-
-A skill conterá conhecimento, instruções e schemas.
-
-As tools Python executarão lógica determinística.
-
-Separação esperada:
-
-```text
-skill/ → conhecimento e comportamento do agente
-tools/ → execução confiável e testável
+- Não gera .DEC oficial.
+- Não garante compatibilidade com PGD.
+- OCR ainda pode falhar com imagem ruim.
+- Extração heurística depende dos padrões textuais.
+- Melhor OCR por comprimento não garante melhor interpretação.
+- Ainda falta modo interativo para revisão manual.
+- Ainda falta estudo detalhado do layout .DEC real.
 ```
 
 ---
 
-## 12. Observações importantes
+## 17. Próximas etapas técnicas
 
-Este projeto lida com dados fiscais sensíveis.
-
-Por isso:
-
-* não devemos usar dados reais sem anonimização nos testes;
-* documentos reais devem ser tratados com cuidado;
-* logs não devem expor CPF, CNPJ ou valores sem necessidade;
-* o usuário sempre deve conferir tudo no PGD oficial;
-* a skill não deve prometer transmissão nem substituição de contador.
+```text
+1. Criar testes adicionais para fluxos best.
+2. Usar config/ocr_config.json dentro dos scripts de pré-processamento.
+3. Criar modo interativo para preencher manual-review-pack.
+4. Melhorar extração de dados de imóveis reais.
+5. Criar fixtures reais anonimizadas.
+6. Estudar layout .DEC real.
+7. Evoluir exportador experimental para registros mais próximos do formato oficial.
+```
 
 ---
 
-## 13. Histórico do desenvolvimento
+## 18. Estado esperado antes de commit
 
-### Estado inicial
+Antes de qualquer commit importante:
 
-Foi definido que o projeto será desenvolvido passo a passo para fins de aprendizado.
+```bash
+python3 tools/validate_ocr_config.py
+python3 tests/run_tests.py
+python3 tools/dev_check.py
+```
 
-### Primeiros passos concluídos
+Se passar:
 
-* criação da pasta `irpf_ocr_dec` em `~/Documents`;
-* criação das pastas `skill`, `tools` e `tests`;
-* implementação de `normalize.py`;
-* correção do erro de execução causado por rodar o comando fora da pasta do projeto;
-* implementação de `validate.py`;
-* implementação de `check_json.py`;
-* implementação de `report.py`;
-* geração do primeiro relatório Markdown;
-* implementação de `pipeline.py`;
-* implementação de `build_canonical_json.py`;
-* criação da extração simulada de um informe de rendimentos PJ.
-
-### Próximo registro esperado
-
-Adicionar um pipeline que execute de ponta a ponta:
-
-```text
-extração simulada → JSON canônico → validação → relatório
+```bash
+git status
+git add .
+git commit -m "Mensagem objetiva"
+git push
 ```
