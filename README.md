@@ -1,578 +1,439 @@
 # IRPF OCR DEC
 
-Projeto experimental para construção de uma skill/agente capaz de auxiliar na organização inicial de dados para Declaração de Imposto de Renda Pessoa Física brasileira a partir de documentos brutos, textos extraídos, PDFs pesquisáveis, PDFs escaneados, imagens com OCR e extrações estruturadas.
+Projeto experimental para transformar documentos fiscais em dados estruturados revisáveis, consolidar essas informações em um JSON canônico para IRPF e preparar uma exportação experimental pré-DEC.
 
-A ideia central é transformar documentos fiscais em um JSON canônico revisável e, futuramente, gerar um arquivo `.DEC` experimental importável no PGD oficial da Receita Federal.
+> **Aviso importante:** este projeto ainda não gera um `.DEC` oficial compatível com o PGD da Receita Federal. A exportação atual é experimental e serve apenas para estudo de mapeamento e evolução futura.
 
 ---
 
-## Aviso importante
+## Objetivo
 
-Este projeto não substitui contador, revisão humana, PGD oficial da Receita Federal ou responsabilidade do contribuinte.
+Criar um fluxo local, determinístico e revisável para auxiliar na organização de documentos usados na declaração de IRPF.
 
-O fluxo correto deve sempre preservar uma etapa de conferência humana:
+O fluxo atual cobre:
 
 ```text
-documento bruto
-    ↓
-extração de texto ou OCR
-    ↓
-classificação
-    ↓
-pré-triagem
-    ↓
-extração estruturada
-    ↓
-validação da extração
-    ↓
-promoção segura
-    ↓
-revisão humana
-    ↓
-JSON canônico
-    ↓
-validação canônica
-    ↓
-relatório humano
-    ↓
-geração futura do .DEC
+documentos brutos
+→ extração de texto/OCR
+→ classificação documental
+→ pré-triagem
+→ extração estruturada
+→ validação
+→ promoção segura
+→ revisão assistida
+→ pacote de revisão manual
+→ aplicação de correções humanas
+→ aprovação segura
+→ JSON canônico
+→ relatório humano
+→ exportação experimental pré-DEC
 ```
 
 ---
 
-## Estado atual do projeto
+## Status atual
 
-O projeto já possui uma base funcional para processamento determinístico e um fluxo real inicial a partir de arquivos brutos.
+```text
+MVP local funcional: avançado
+Fluxo raw-to-canonical: funcional
+Revisão humana assistida: funcional
+Aplicação de correções manuais: funcional
+Estratégia OCR configurável: funcional
+Seleção de melhor OCR: funcional
+Interface unificada: funcional
+Makefile com atalhos: funcional
+GitHub Actions CI: funcional/em validação
+Exportação experimental pré-DEC: funcional
+Geração .DEC oficial: ainda não implementada
+```
 
-Atualmente existe suporte para:
+O sistema bloqueia avanço automático quando encontra:
 
-- classificador simples de documentos;
-- simulador local de agente individual;
-- simulador local de agente em lote;
-- pré-triagem de documentos;
-- scanner de documentos brutos em `inputs/raw/`;
-- extração de texto de `.txt`;
-- extração de texto de PDF pesquisável com `pypdf`;
-- OCR de imagem com Tesseract via `pytesseract`;
-- pré-processamento simples de imagem para OCR;
-- fallback OCR para PDF escaneado usando `pdf2image` + Poppler + Tesseract;
-- extração estruturada heurística para os 5 tipos principais do pipeline;
-- extração estruturada em lote;
-- validação de extrações estruturadas;
-- promoção segura de extrações válidas e sem `requires_review`;
-- pipeline canônico a partir de `inputs/extracted/`;
-- validação canônica;
-- relatório humano;
-- limpeza de outputs conhecidos;
-- checagem de desenvolvimento integrada;
-- testes automatizados.
-
-Ainda não possui:
-
-- OCR robusto para todos os cenários reais;
-- revisão humana assistida completa;
-- interface de correção;
-- integração final com Agno;
-- geração `.DEC`;
-- transmissão de declaração;
-- parser reverso `.DEC`;
-- cálculo completo de imposto.
+```text
+CPF inválido
+CNPJ inválido
+CPF/CNPJ inválido
+campos ausentes
+campos de baixa confiança
+documentos desconhecidos
+documentos que exigem OCR/revisão manual
+JSON canônico inválido
+```
 
 ---
 
-## Estrutura geral
+## Interface principal
+
+O projeto possui uma interface unificada:
+
+```bash
+python3 tools/irpf_ocr.py <comando>
+```
+
+Comandos principais:
+
+```bash
+python3 tools/irpf_ocr.py setup
+python3 tools/irpf_ocr.py status
+python3 tools/irpf_ocr.py project-status
+python3 tools/irpf_ocr.py run
+python3 tools/irpf_ocr.py continue
+python3 tools/irpf_ocr.py check
+```
+
+### Significado dos comandos
+
+```text
+setup           configura o projeto localmente, instala hooks e roda checagens
+status          mostra a estratégia OCR configurada
+project-status  mostra o estado dos outputs e o próximo passo provável
+run             executa o fluxo definido em config/ocr_config.json
+continue        continua depois da revisão manual conforme a estratégia OCR
+check           roda validações e testes do projeto
+```
+
+---
+
+## Atalhos com Makefile
+
+Também é possível usar:
+
+```bash
+make setup
+make status
+make project-status
+make run
+make continue
+make check
+make test
+make safety
+```
+
+Equivalências principais:
+
+```text
+make setup          → python3 tools/irpf_ocr.py setup
+make status         → python3 tools/irpf_ocr.py status
+make project-status → python3 tools/irpf_ocr.py project-status
+make run            → python3 tools/irpf_ocr.py run
+make continue       → python3 tools/irpf_ocr.py continue
+make check          → python3 tools/irpf_ocr.py check
+make test           → python3 tests/run_tests.py
+make safety         → python3 tools/check_repo_safety.py
+```
+
+---
+
+## Uso recomendado
+
+Depois de clonar o projeto:
+
+```bash
+cd ~/Documents/irpf_ocr_dec
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 tools/irpf_ocr.py setup
+```
+
+No uso diário:
+
+```bash
+python3 tools/irpf_ocr.py status
+python3 tools/irpf_ocr.py run
+```
+
+Se o fluxo parar para revisão humana:
+
+```bash
+python3 tools/irpf_ocr.py continue
+```
+
+Para checagem geral:
+
+```bash
+python3 tools/irpf_ocr.py check
+```
+
+---
+
+## Configuração OCR
+
+A estratégia OCR é controlada por:
+
+```text
+config/ocr_config.json
+```
+
+Estratégias aceitas:
+
+```text
+normal
+prepared
+best
+```
+
+Mapeamento:
+
+```text
+ocr_strategy = normal   → tools/run_mvp_flow.py
+ocr_strategy = prepared → tools/run_prepared_raw_flow.py
+ocr_strategy = best     → tools/run_best_mvp_flow.py
+```
+
+Continuação após revisão:
+
+```text
+normal → tools/continue_after_manual_review.py
+best   → tools/continue_after_best_manual_review.py
+```
+
+A estratégia `prepared` ainda é experimental e não possui continuação canônica completa.
+
+Validar a configuração OCR:
+
+```bash
+python3 tools/validate_ocr_config.py
+```
+
+Ver status da estratégia OCR:
+
+```bash
+python3 tools/ocr_strategy_status.py
+```
+
+---
+
+## Exemplo de `config/ocr_config.json`
+
+```json
+{
+  "ocr_strategy": "best",
+  "paths": {
+    "raw_input_dir": "inputs/raw",
+    "prepared_input_dir": "outputs/raw_prepared_for_ocr",
+    "extracted_text_dir": "outputs/extracted_text",
+    "extracted_text_prepared_dir": "outputs/extracted_text_prepared",
+    "extracted_text_best_dir": "outputs/extracted_text_best"
+  },
+  "preprocessing": {
+    "enabled": true,
+    "scale_factor": 2,
+    "contrast_factor": 1.8,
+    "sharpness_factor": 1.5,
+    "binarization_threshold": 180
+  },
+  "selection": {
+    "method": "longest_text",
+    "prefer_original_on_tie": true
+  },
+  "safety": {
+    "allow_partial_preprocessing_errors": true,
+    "allow_preflight_failure": true,
+    "require_manual_review_for_invalid_identifiers": true
+  }
+}
+```
+
+---
+
+## Tipos de documento suportados
+
+```text
+recibo_medico
+plano_saude
+informe_rendimentos_pj
+bem_imovel
+bem_veiculo
+```
+
+Documentos desconhecidos são bloqueados antes de entrar no fluxo canônico.
+
+---
+
+## Estrutura principal
 
 ```text
 irpf_ocr_dec/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── config/
-│   └── project_config.json
+│   ├── project_config.json
+│   └── ocr_config.json
 ├── inputs/
 │   ├── raw/
+│   ├── raw_ignored/
 │   └── extracted/
 ├── outputs/
-│   ├── extracted_text/
-│   ├── structured_extractions/
-│   └── promoted_extractions/
-├── skill/
-│   ├── SKILL.md
-│   ├── instructions.md
-│   └── references/
-├── tests/
-│   ├── fixtures/
-│   ├── run_tests.py
-│   └── unit/
+│   └── .gitkeep
+├── scripts/
+│   └── git-hooks/
+│       └── pre-commit
 ├── tools/
-└── requirements.txt
+├── tests/
+│   └── unit/
+├── skill/
+│   └── SKILL.md
+├── Makefile
+├── README.md
+├── DOCUMENTACAO.md
+└── CHANGELOG.md
 ```
 
 ---
 
-## Pastas principais
+## Pastas importantes
 
 ### `inputs/raw/`
 
-Entrada de documentos brutos.
-
-Pode conter, por exemplo:
+Pasta local para documentos brutos:
 
 ```text
-.txt
-.pdf
-.png
-.jpg
-.jpeg
-.tif
-.tiff
+PDF pesquisável
+PDF escaneado
+imagem PNG/JPG
+TXT
 ```
 
-Esses arquivos são usados pelo fluxo real:
+Essa pasta deve ser ignorada pelo Git.
 
-```bash
-python3 tools/run_raw_flow.py
-```
+### `inputs/raw_ignored/`
 
-### `outputs/extracted_text/`
-
-Recebe textos extraídos de arquivos brutos.
-
-### `outputs/structured_extractions/`
-
-Recebe JSONs estruturados gerados automaticamente a partir dos textos extraídos.
-
-Essa pasta contém resultados automáticos e ainda pode incluir itens que exigem revisão.
-
-### `outputs/promoted_extractions/`
-
-Área segura de promoção.
-
-Contém somente extrações estruturadas válidas e sem `requires_review`.
-
-Esses arquivos ainda não são copiados automaticamente para `inputs/extracted/`.
+Arquivos removidos do fluxo por estarem vazios, corrompidos ou fora do escopo.
 
 ### `inputs/extracted/`
 
-Entrada oficial do pipeline canônico.
+JSONs estruturados manuais ou fixtures já prontos para o pipeline canônico.
 
-Deve conter apenas JSONs estruturados revisados, válidos e seguros para consolidação.
+### `outputs/`
+
+Relatórios, JSONs intermediários, textos extraídos, pacotes de revisão e exportações.
+
+Essa pasta deve ser ignorada pelo Git, exceto `outputs/.gitkeep`.
+
+---
+
+## Scripts principais
+
+### Interface, configuração e status
+
+```text
+tools/irpf_ocr.py
+tools/setup_project.py
+tools/project_status.py
+tools/ocr_strategy_status.py
+tools/run_ocr_strategy.py
+tools/continue_after_ocr_strategy_review.py
+tools/validate_config.py
+tools/validate_ocr_config.py
+```
+
+### Segurança do repositório
+
+```text
+tools/check_repo_safety.py
+tools/install_git_hooks.py
+scripts/git-hooks/pre-commit
+```
+
+### OCR e preparação
+
+```text
+tools/extract_text.py
+tools/preprocess_raw_images.py
+tools/prepare_raw_for_ocr.py
+tools/run_prepared_raw_flow.py
+tools/compare_ocr_outputs.py
+tools/select_best_ocr_outputs.py
+tools/run_best_ocr_flow.py
+```
+
+### Classificação, triagem e extração estruturada
+
+```text
+tools/classify_document.py
+tools/preflight_documents.py
+tools/extract_structured_from_text.py
+tools/extract_structured_batch.py
+```
+
+### Validação, promoção e revisão
+
+```text
+tools/validate_extracted.py
+tools/promote_structured_extractions.py
+tools/review_promoted_extractions.py
+tools/generate_manual_review_pack.py
+tools/apply_manual_review_pack.py
+tools/approve_promoted_extractions.py
+```
+
+### Fluxos completos
+
+```text
+tools/run_raw_flow.py
+tools/run_mvp_flow.py
+tools/continue_after_manual_review.py
+tools/run_best_mvp_flow.py
+tools/continue_after_best_manual_review.py
+```
+
+### Pipeline canônico e exportação
+
+```text
+tools/run_project.py
+tools/pipeline_batch.py
+tools/build_canonical_json.py
+tools/report.py
+tools/export_dec_experimental.py
+```
+
+### Desenvolvimento
+
+```text
+tools/dev_check.py
+tools/clean_outputs.py
+tests/run_tests.py
+```
 
 ---
 
 ## Instalação
 
-### 1. Criar ambiente virtual
+No macOS:
 
 ```bash
 cd ~/Documents/irpf_ocr_dec
-
 python3 -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 2. Instalar dependências Python
-
-```bash
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
-```
-
-O `requirements.txt` atual deve conter:
-
-```text
-pypdf
-pillow
-pytesseract
-pdf2image
-```
-
-### 3. Instalar Tesseract no macOS
+Se for usar OCR com Tesseract:
 
 ```bash
 brew install tesseract
 brew install tesseract-lang
 ```
 
-Conferir:
+Depois:
 
 ```bash
-tesseract --version
+python3 tools/setup_project.py
 ```
 
-### 4. Instalar Poppler no macOS
-
-O `pdf2image` usa utilitários do Poppler para converter páginas de PDF em imagens.
+ou:
 
 ```bash
-brew install poppler
+python3 tools/irpf_ocr.py setup
 ```
-
-Conferir:
-
-```bash
-pdftoppm -h
-```
-
-### 5. Testar dependências
-
-```bash
-python3 - <<'PY'
-import pypdf
-import pytesseract
-from PIL import Image
-from pdf2image import convert_from_path
-
-print("Dependências Python OK")
-PY
-```
-
----
-
-## Documentos suportados atualmente
-
-| Documento | `document_type` | Destino canônico |
-|---|---|---|
-| Informe de rendimentos PJ | `informe_rendimentos_pj` | `rendimentos.tributaveis_pj[]` |
-| Recibo médico | `recibo_medico` | `pagamentos[]` |
-| Plano de saúde | `plano_saude` | `pagamentos[]` |
-| Bem imóvel | `bem_imovel` | `bens[]` |
-| Bem veículo | `bem_veiculo` | `bens[]` |
-
-A extração estruturada automática a partir de texto já cobre os principais tipos usados pelo pipeline canônico:
-
-```text
-recibo_medico
-informe_rendimentos_pj
-plano_saude
-bem_veiculo
-bem_imovel
-```
-
-Essas extrações são heurísticas, determinísticas e ainda exigem revisão humana antes de uso real na declaração.
-
----
-
-## Fluxo real a partir de documentos brutos
-
-O projeto possui um fluxo real inicial para processar arquivos em `inputs/raw/`.
-
-Comando principal:
-
-```bash
-python3 tools/run_raw_flow.py
-```
-
-Esse comando executa:
-
-```text
-inputs/raw/
-    ↓
-tools/scan_raw_inputs.py
-    ↓
-tools/extract_text.py
-    ↓
-outputs/extracted_text/
-    ↓
-tools/preflight_documents.py
-    ↓
-tools/extract_structured_batch.py
-    ↓
-outputs/structured_extractions/
-    ↓
-tools/validate_extracted.py
-    ↓
-tools/promote_structured_extractions.py
-    ↓
-outputs/promoted_extractions/
-```
-
-Etapas do fluxo:
-
-1. escaneia arquivos brutos;
-2. extrai texto de `.txt`, PDF pesquisável, imagem via OCR e PDF escaneado via OCR por página;
-3. faz pré-triagem dos textos extraídos;
-4. gera extrações estruturadas em lote;
-5. valida os JSONs estruturados;
-6. promove somente extrações válidas e sem `requires_review` para `outputs/promoted_extractions/`.
-
-A pasta `outputs/promoted_extractions/` é uma área segura de revisão. Os arquivos nela ainda não são copiados automaticamente para `inputs/extracted/`.
-
----
-
-## Fluxos individuais
-
-### Scanner de documentos brutos
-
-```bash
-python3 tools/scan_raw_inputs.py inputs/raw
-python3 tools/scan_raw_inputs.py inputs/raw --json
-```
-
-Gera:
-
-```text
-outputs/raw-inputs-manifest.json
-outputs/raw-inputs-manifest.report.md
-```
-
-### Extração de texto e OCR
-
-```bash
-python3 tools/extract_text.py inputs/raw
-python3 tools/extract_text.py inputs/raw --json
-```
-
-Gera:
-
-```text
-outputs/extract-text.json
-outputs/extract-text.report.md
-outputs/extracted_text/
-```
-
-Comportamento atual:
-
-| Tipo | Comportamento |
-|---|---|
-| `.txt` | lê texto diretamente |
-| PDF pesquisável | tenta extrair texto com `pypdf` |
-| PDF escaneado | tenta converter páginas em imagens com `pdf2image` e aplicar OCR |
-| imagem | tenta OCR com Tesseract |
-| arquivo vazio | marca como `empty` |
-| extensão não suportada | marca como `unsupported` |
-| PDF/imagem inválido | marca como `requires_ocr` ou falha tratada com aviso |
-
-### Classificação de texto
-
-```bash
-python3 tools/classify_document.py outputs/extracted_text/teste_recibo.txt
-python3 tools/classify_document.py outputs/extracted_text/teste_recibo.txt --json
-```
-
-Retorna:
-
-```text
-document_type
-label
-confidence
-scores
-matched_keywords
-```
-
-### Pré-triagem
-
-```bash
-python3 tools/preflight_documents.py outputs/extracted_text
-python3 tools/preflight_documents.py outputs/extracted_text --json
-```
-
-Gera:
-
-```text
-outputs/preflight-documents.json
-outputs/preflight-documents.report.md
-```
-
-Status possíveis:
-
-```text
-ready
-blocked
-```
-
-### Extração estruturada individual
-
-```bash
-python3 tools/extract_structured_from_text.py outputs/extracted_text/teste_recibo.txt --json
-```
-
-Salvar JSON estruturado:
-
-```bash
-python3 tools/extract_structured_from_text.py \
-  outputs/extracted_text/teste_recibo.txt \
-  outputs/manual_extracted/teste_recibo.json
-```
-
-Exemplos:
-
-```bash
-python3 tools/extract_structured_from_text.py \
-  outputs/extracted_text/informe_pj_teste.txt \
-  outputs/manual_extracted/informe_pj_teste.json
-
-python3 tools/extract_structured_from_text.py \
-  outputs/extracted_text/plano_saude_teste.txt \
-  outputs/manual_extracted/plano_saude_teste.json
-
-python3 tools/extract_structured_from_text.py \
-  outputs/extracted_text/bem_veiculo_teste.txt \
-  outputs/manual_extracted/bem_veiculo_teste.json
-
-python3 tools/extract_structured_from_text.py \
-  outputs/extracted_text/bem_imovel_teste.txt \
-  outputs/manual_extracted/bem_imovel_teste.json
-```
-
-### Extração estruturada em lote
-
-```bash
-python3 tools/extract_structured_batch.py outputs/extracted_text
-python3 tools/extract_structured_batch.py outputs/extracted_text --json
-```
-
-Gera:
-
-```text
-outputs/structured_extractions/
-outputs/structured-extractions-batch.json
-outputs/structured-extractions-batch.report.md
-```
-
-Atualmente o lote salva automaticamente estes tipos:
-
-```text
-recibo_medico
-informe_rendimentos_pj
-plano_saude
-bem_veiculo
-bem_imovel
-```
-
-Tipos desconhecidos ou ainda não implementados são marcados como `requires_review`.
-
-### Validação das extrações estruturadas
-
-Validar arquivo individual:
-
-```bash
-python3 tools/validate_extracted.py outputs/structured_extractions/testemedic.json
-```
-
-Validar todos os JSONs gerados:
-
-```bash
-for f in outputs/structured_extractions/*.json; do
-  echo "Validando $f"
-  python3 tools/validate_extracted.py "$f"
-done
-```
-
-### Promoção segura
-
-A promoção segura copia apenas JSONs válidos e sem `requires_review`.
-
-Teste em pasta segura:
-
-```bash
-python3 tools/promote_structured_extractions.py \
-  outputs/structured_extractions \
-  outputs/promoted_test \
-  outputs/promote-structured-extractions.json \
-  outputs/promote-structured-extractions.report.md
-```
-
-Uso padrão:
-
-```bash
-python3 tools/promote_structured_extractions.py
-```
-
-Por padrão:
-
-```text
-origem: outputs/structured_extractions/
-destino: inputs/extracted/
-```
-
-Recomendação atual: preferir promoção para `outputs/promoted_extractions/` via `run_raw_flow.py`, revisar os arquivos e só depois decidir se devem entrar em `inputs/extracted/`.
-
----
-
-## Pipeline canônico
-
-O pipeline canônico ainda usa como entrada oficial:
-
-```text
-inputs/extracted/
-```
-
-Rodar:
-
-```bash
-python3 tools/run_project.py
-```
-
-Gera:
-
-```text
-outputs/irpf-consolidado.json
-outputs/irpf-consolidado.report.md
-```
-
-Esse pipeline:
-
-1. lê extrações estruturadas;
-2. valida extrações;
-3. normaliza dados;
-4. constrói JSON canônico parcial;
-5. consolida;
-6. valida o JSON consolidado;
-7. gera relatório humano.
 
 ---
 
 ## Checagem de desenvolvimento
 
-Rodar:
-
-```bash
-python3 tools/dev_check.py
-```
-
-Executa uma checagem integrada do estado do projeto.
-
----
-
-## Limpeza de outputs
-
-Rodar:
-
-```bash
-python3 tools/clean_outputs.py
-```
-
-Remove outputs conhecidos como:
-
-```text
-outputs/irpf-consolidado.json
-outputs/irpf-consolidado.report.md
-outputs/agent-decision.json
-outputs/agent-decisions.json
-outputs/agent-decisions.report.md
-outputs/preflight-documents.json
-outputs/preflight-documents.report.md
-outputs/raw-inputs-manifest.json
-outputs/raw-inputs-manifest.report.md
-outputs/extract-text.json
-outputs/extract-text.report.md
-outputs/structured-extractions-batch.json
-outputs/structured-extractions-batch.report.md
-outputs/promote-structured-extractions.json
-outputs/promote-structured-extractions.report.md
-```
-
-Por segurança, algumas pastas de revisão não são apagadas automaticamente, como:
-
-```text
-outputs/promoted_extractions/
-outputs/structured_extractions/
-outputs/extracted_text/
-```
-
----
-
-## Testes
-
-Rodar todos os testes:
+Rodar testes:
 
 ```bash
 python3 tests/run_tests.py
@@ -584,67 +445,466 @@ Rodar checagem completa:
 python3 tools/dev_check.py
 ```
 
-Testes relevantes atuais:
+O `dev_check.py` deve executar:
 
 ```text
-tests/unit/test_normalize.py
-tests/unit/test_validate.py
-tests/unit/test_validate_config.py
-tests/unit/test_validate_extracted.py
-tests/unit/test_build_canonical_json.py
-tests/unit/test_pipeline_batch.py
-tests/unit/test_report.py
-tests/unit/test_clean_outputs.py
-tests/unit/test_scan_raw_inputs.py
-tests/unit/test_extract_text.py
-tests/unit/test_extract_structured_from_text.py
-tests/unit/test_extract_structured_batch.py
-tests/unit/test_promote_structured_extractions.py
-tests/unit/test_run_project.py
-tests/unit/test_run_raw_flow.py
-tests/unit/test_classify_document.py
-tests/unit/test_agent_simulator.py
-tests/unit/test_agent_batch_simulator.py
-tests/unit/test_preflight_documents.py
+validate_config.py
+validate_ocr_config.py
+tests/run_tests.py
+check_repo_safety.py
 ```
 
 ---
 
-## Comandos úteis
+## Segurança do repositório
 
-### Rodar fluxo real completo
+O projeto possui proteção contra commit acidental de documentos fiscais, imagens, PDFs, outputs e `.DEC`.
+
+Checagem manual:
 
 ```bash
-python3 tools/run_raw_flow.py
+python3 tools/check_repo_safety.py
 ```
 
-### Rodar pipeline canônico
+Instalar hook local:
+
+```bash
+python3 tools/install_git_hooks.py
+```
+
+O hook versionado fica em:
+
+```text
+scripts/git-hooks/pre-commit
+```
+
+Ele é copiado para:
+
+```text
+.git/hooks/pre-commit
+```
+
+Arquivos e pastas que não devem ser commitados:
+
+```text
+inputs/raw/
+inputs/raw_test_*/
+inputs/raw_ignored/
+inputs/private/
+inputs/real/
+outputs/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.webp
+*.dec
+*.DEC
+```
+
+---
+
+## CI / GitHub Actions
+
+O projeto possui workflow de CI em:
+
+```text
+.github/workflows/ci.yml
+```
+
+A cada `push` na branch `main` e a cada `pull_request`, o GitHub Actions executa:
+
+```bash
+python tools/validate_config.py config/project_config.json
+python tools/validate_ocr_config.py
+python tools/check_repo_safety.py
+python tests/run_tests.py
+python tools/dev_check.py
+```
+
+O objetivo do CI é garantir que:
+
+```text
+configurações continuam válidas
+testes unitários continuam passando
+arquivos sensíveis não foram rastreados
+checagem de desenvolvimento continua íntegra
+```
+
+---
+
+## Fluxo rápido com JSONs estruturados
+
+Usa:
+
+```text
+inputs/extracted/
+```
+
+Rodar:
 
 ```bash
 python3 tools/run_project.py
 ```
 
-### Rodar testes
+Saídas:
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+```
+
+Validar JSON consolidado:
+
+```bash
+python3 -m json.tool outputs/irpf-consolidado.json > /tmp/irpf_ok.json
+```
+
+---
+
+## Fluxo raw normal
+
+```bash
+python3 tools/run_raw_flow.py
+```
+
+Fluxo:
+
+```text
+inputs/raw/
+→ extract_text.py
+→ preflight_documents.py
+→ extract_structured_batch.py
+→ validate_extracted.py
+→ promote_structured_extractions.py
+→ review_promoted_extractions.py
+```
+
+---
+
+## Fluxo MVP normal
+
+```bash
+python3 tools/run_mvp_flow.py
+```
+
+Se houver pendências, gera:
+
+```text
+outputs/manual-review-pack.json
+outputs/manual-review-pack.report.md
+```
+
+Depois de preencher o pacote:
+
+```bash
+python3 tools/continue_after_manual_review.py
+```
+
+---
+
+## Fluxo com OCR preparado
+
+Preparar documentos:
+
+```bash
+python3 tools/prepare_raw_for_ocr.py
+```
+
+Rodar fluxo preparado:
+
+```bash
+python3 tools/run_prepared_raw_flow.py
+```
+
+Esse fluxo usa:
+
+```text
+outputs/raw_prepared_for_ocr/
+```
+
+e gera:
+
+```text
+outputs/extracted_text_prepared/
+outputs/structured_extractions_prepared/
+outputs/promoted_extractions_prepared/
+outputs/review-promoted-extractions-prepared.*
+```
+
+---
+
+## Comparação OCR normal vs OCR preparado
+
+```bash
+python3 tools/compare_ocr_outputs.py
+```
+
+Saídas:
+
+```text
+outputs/compare-ocr-outputs.json
+outputs/compare-ocr-outputs.report.md
+```
+
+---
+
+## Seleção do melhor OCR
+
+```bash
+python3 tools/select_best_ocr_outputs.py
+```
+
+Compara:
+
+```text
+outputs/extracted_text/
+outputs/extracted_text_prepared/
+```
+
+e gera:
+
+```text
+outputs/extracted_text_best/
+outputs/select-best-ocr-outputs.json
+outputs/select-best-ocr-outputs.report.md
+```
+
+Critério atual:
+
+```text
+seleciona o texto com mais caracteres
+em caso de empate, prefere OCR normal
+```
+
+---
+
+## Fluxo best OCR
+
+```bash
+python3 tools/run_best_ocr_flow.py
+```
+
+Fluxo:
+
+```text
+OCR normal
+→ OCR preparado
+→ comparação
+→ seleção do melhor OCR
+→ extração estruturada
+→ promoção
+→ revisão assistida
+```
+
+Saídas principais:
+
+```text
+outputs/extracted_text_best/
+outputs/structured_extractions_best/
+outputs/promoted_extractions_best/
+outputs/review-promoted-extractions-best.json
+outputs/review-promoted-extractions-best.report.md
+```
+
+---
+
+## MVP best OCR
+
+```bash
+python3 tools/run_best_mvp_flow.py
+```
+
+Fluxo:
+
+```text
+best OCR
+→ revisão assistida
+→ pacote manual best
+→ aprovação segura
+→ JSON canônico best
+→ exportação experimental best
+```
+
+Se houver pendências, gera:
+
+```text
+outputs/manual-review-pack-best.json
+outputs/manual-review-pack-best.report.md
+```
+
+Depois de preencher:
+
+```bash
+python3 tools/continue_after_best_manual_review.py
+```
+
+Saídas finais:
+
+```text
+outputs/approved_best/
+outputs/irpf-consolidado-best.json
+outputs/irpf-consolidado-best.report.md
+outputs/irpf-export-dec-experimental-best.txt
+outputs/irpf-export-dec-experimental-best.report.md
+```
+
+---
+
+## Revisão humana
+
+Pacote normal:
+
+```text
+outputs/manual-review-pack.json
+```
+
+Pacote best:
+
+```text
+outputs/manual-review-pack-best.json
+```
+
+Itens aparecem assim:
+
+```json
+{
+  "field": "cpf_declarante",
+  "current_value": "11122233344",
+  "reasons": [
+    "CPF inválido"
+  ],
+  "suggested_value": null,
+  "status": "pending"
+}
+```
+
+Para corrigir:
+
+```json
+"suggested_value": "12345678909",
+"status": "resolved"
+```
+
+Para CNPJ:
+
+```json
+"suggested_value": "11222333000181",
+"status": "resolved"
+```
+
+Depois rode:
+
+```bash
+python3 tools/irpf_ocr.py continue
+```
+
+ou:
+
+```bash
+make continue
+```
+
+---
+
+## Exportação experimental pré-DEC
+
+Normal:
+
+```bash
+python3 tools/export_dec_experimental.py
+```
+
+Best:
+
+```bash
+python3 tools/export_dec_experimental.py   outputs/irpf-consolidado-best.json   outputs/irpf-export-dec-experimental-best.txt   outputs/irpf-export-dec-experimental-best.report.md
+```
+
+Importante:
+
+```text
+Esse arquivo NÃO é um .DEC oficial.
+Não deve ser importado no PGD.
+Serve apenas para estudo de mapeamento futuro.
+```
+
+---
+
+## Saídas principais
+
+### Normal
+
+```text
+outputs/irpf-consolidado.json
+outputs/irpf-consolidado.report.md
+outputs/irpf-export-dec-experimental.txt
+outputs/irpf-export-dec-experimental.report.md
+```
+
+### Best OCR
+
+```text
+outputs/irpf-consolidado-best.json
+outputs/irpf-consolidado-best.report.md
+outputs/irpf-export-dec-experimental-best.txt
+outputs/irpf-export-dec-experimental-best.report.md
+```
+
+---
+
+## Regras de segurança
+
+O projeto deve bloquear avanço automático quando houver:
+
+```text
+CPF inválido
+CNPJ inválido
+CPF/CNPJ inválido
+campo obrigatório ausente
+campo com baixa confiança
+documento desconhecido
+documento que exige OCR/revisão manual
+JSON canônico inválido
+```
+
+---
+
+## Observações sobre OCR real
+
+Documentos reais podem falhar por:
+
+```text
+imagem borrada
+foto torta
+documento cortado
+baixa resolução
+texto quebrado pelo OCR
+campos sem rótulo
+CPF/CNPJ ausente
+classificação ambígua
+```
+
+O comportamento esperado nesses casos é gerar revisão humana, não avançar automaticamente.
+
+---
+
+## Desenvolvimento
+
+Sempre que alterar o projeto:
 
 ```bash
 python3 tests/run_tests.py
-```
-
-### Rodar checagem de desenvolvimento
-
-```bash
 python3 tools/dev_check.py
+python3 tools/check_repo_safety.py
 ```
 
-### Ver status Git
+Se passar:
 
 ```bash
 git status
-```
-
-### Commit padrão
-
-```bash
 git add .
 git commit -m "Mensagem objetiva"
 git push
@@ -652,66 +912,74 @@ git push
 
 ---
 
-## Estado atual em termos de capacidade
+## Arquivos locais de teste
 
-Já funciona:
-
-```text
-TXT real                         → extração de texto
-PDF pesquisável                  → extração com pypdf
-Imagem/print                     → OCR com Tesseract
-PDF escaneado                    → fallback OCR por página com pdf2image + Tesseract
-Texto extraído                   → classificação
-Recibo médico                    → extração estruturada heurística
-Informe de rendimentos PJ        → extração estruturada heurística
-Plano de saúde                   → extração estruturada heurística
-Bem veículo                      → extração estruturada heurística
-Bem imóvel                       → extração estruturada heurística
-JSON estruturado                 → validação
-Extração sem revisão             → promoção segura
-Pipeline canônico                → consolidação a partir de inputs/extracted/
-```
-
-Ainda precisa melhorar:
+Pastas como estas são usadas apenas localmente:
 
 ```text
-OCR de fotos ruins
-pré-processamento mais robusto de imagem
-PDF escaneado multipágina em cenários reais variados
-extração estruturada mais robusta para documentos reais
-revisão humana assistida
-integração final com Agno
-geração .DEC
+inputs/raw_test_*/
+outputs/*_test_*
+outputs/*-test-*
+outputs/approved_test*
+outputs/approved_best*
+outputs/promoted_test*
+outputs/promoted_extractions_best*
+outputs/structured_extractions_test*
+outputs/extracted_text_test*
+outputs/extracted_text_best*
 ```
 
 ---
 
-## Próximos passos técnicos recomendados
+## GitHub
 
-Prioridade recomendada:
+Repositório remoto usado no projeto:
 
-1. criar etapa de revisão humana assistida para `outputs/promoted_extractions/`;
-2. criar ferramenta para copiar extrações revisadas para `inputs/extracted/`;
-3. tornar `run_raw_flow.py` configurável por flags;
-4. melhorar OCR com pré-processamento mais robusto;
-5. testar PDF escaneado multipágina real;
-6. robustecer extrações heurísticas com mais padrões reais;
-7. integrar com Agno;
-8. estudar formato `.DEC`.
+```text
+git@github.com:aksbarbosa/agentetributarioocr.git
+```
 
 ---
 
-## Observação sobre arquivos reais
-
-Não coloque documentos reais sensíveis no Git.
-
-Evite versionar:
+## Próximas etapas
 
 ```text
-outputs/
-inputs/raw/
-documentos pessoais reais
-prints com CPF real
+1. Criar testes adicionais para fluxos best e setup.
+2. Usar config/ocr_config.json dentro dos scripts de pré-processamento.
+3. Criar modo interativo para preencher manual-review-pack.json.
+4. Melhorar extração de dados de imóveis reais.
+5. Criar fixtures reais anonimizadas.
+6. Estudar layout real .DEC.
+7. Evoluir exportador experimental para mapeamento por registros.
+8. Criar exportador .DEC oficial apenas depois de mapear o layout corretamente.
 ```
 
-Use dados fictícios para testes versionados.
+---
+
+## Limitações atuais
+
+O projeto ainda não faz:
+
+```text
+geração oficial de .DEC
+garantia de compatibilidade com PGD
+interpretação jurídica/contábil
+substituição de revisão humana
+extração perfeita em OCR ruim
+validação fiscal completa
+```
+
+---
+
+## Aviso final
+
+Este projeto é experimental e serve como apoio técnico à organização de documentos de IRPF.
+
+Ele não substitui:
+
+```text
+conferência manual
+contador
+orientação tributária
+validação no PGD oficial da Receita Federal
+```
