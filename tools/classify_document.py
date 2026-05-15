@@ -6,12 +6,26 @@ from pathlib import Path
 DOCUMENT_TYPES = {
     "informe_rendimentos_pj": {
         "label": "Informe de rendimentos PJ",
-        "keywords": [
+        	"keywords": [
             "INFORME DE RENDIMENTOS",
             "INFORME DE RENDIMENTOS PJ",
+            "COMPROVANTE DE RENDIMENTOS",
+            "COMPROVANTE DE RENDIMENTOS PAGOS",
+            "RENDIMENTOS PAGOS",
+            "IMPOSTO SOBRE A RENDA RETIDO NA FONTE",
+            "IMPOSTO SOBRE A RENDA DA PESSOA FÍSICA",
+            "IMPOSTO SOBRE A RENDA DA PESSOA FISICA",
+            "ANO-CALENDÁRIO",
+            "ANO-CALENDARIO",
+            "FONTE PAGADORA",
+            "PESSOA FÍSICA BENEFICIÁRIA",
+            "PESSOA FISICA BENEFICIARIA",
+            "BENEFICIÁRIA DOS RENDIMENTOS",
+            "BENEFICIARIA DOS RENDIMENTOS",
+            "NATUREZA DO RENDIMENTO",
+            "RENDIMENTO DO TRABALHO",
             "RENDIMENTOS TRIBUTAVEIS",
             "RENDIMENTOS TRIBUTÁVEIS",
-            "FONTE PAGADORA",
             "CNPJ DA FONTE PAGADORA",
             "CNPJ DO PAGADOR",
             "PREVIDENCIA OFICIAL",
@@ -23,7 +37,7 @@ DOCUMENT_TYPES = {
             "IRRF SOBRE DECIMO TERCEIRO",
             "IRRF SOBRE DÉCIMO TERCEIRO",
         ],
-    },
+   },
     "recibo_medico": {
         "label": "Recibo médico",
         "keywords": [
@@ -72,7 +86,7 @@ DOCUMENT_TYPES = {
     },
     "bem_imovel": {
         "label": "Bem imóvel",
-        "keywords": [
+       "keywords": [
             "BEM IMOVEL",
             "BEM IMÓVEL",
             "IMOVEL",
@@ -83,11 +97,6 @@ DOCUMENT_TYPES = {
             "INSCRICAO IMOBILIARIA",
             "INSCRIÇÃO IMOBILIÁRIA",
             "LOGRADOURO",
-            "BAIRRO",
-            "MUNICIPIO",
-            "MUNICÍPIO",
-            "CIDADE",
-            "CEP",
             "VALOR ANTERIOR",
             "VALOR ATUAL",
             "DATA DE AQUISICAO",
