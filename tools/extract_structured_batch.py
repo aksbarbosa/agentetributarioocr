@@ -40,6 +40,7 @@ def should_save_extraction(response: dict) -> bool:
         "informe_rendimentos_pj",
         "plano_saude",
         "bem_veiculo",
+        "bem_imovel",
     }
 
 

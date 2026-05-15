@@ -142,6 +142,45 @@ def extract_labeled_text_from_line(text: str, label: str) -> str | None:
     return None
 
 
+def extract_numeric_text_by_label(text: str, label: str) -> str | None:
+    """
+    Extrai texto numérico associado a um rótulo.
+    """
+    pattern = rf"{label}\s*[:\-]?\s*([0-9]+)"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return match.group(1)
+
+
+def extract_cep_by_label(text: str, label: str) -> str | None:
+    """
+    Extrai CEP associado a um rótulo.
+    """
+    pattern = rf"{label}\s*[:\-]?\s*(\d{{5}}-?\d{{3}})"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return match.group(1)
+
+
+def extract_uf_by_label(text: str, label: str) -> str | None:
+    """
+    Extrai UF com 2 letras.
+    """
+    pattern = rf"{label}\s*[:\-]?\s*([A-Z]{{2}})"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+
+    if not match:
+        return None
+
+    return match.group(1).upper()
+
+
 def extract_crm_from_text(text: str) -> str | None:
     """
     Extrai CRM simples do texto.
@@ -646,6 +685,176 @@ def build_bem_veiculo_extraction(input_path: str, text: str) -> dict:
     }
 
 
+def build_bem_imovel_extraction(input_path: str, text: str) -> dict:
+    """
+    Cria extração estruturada simples para bem imóvel.
+    """
+    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+    nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
+    data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
+
+    imovel = (
+        extract_labeled_text_from_line(text, "IMOVEL")
+        or extract_labeled_text_from_line(text, "IMÓVEL")
+    )
+
+    matricula = (
+        extract_numeric_text_by_label(text, "MATRICULA")
+        or extract_numeric_text_by_label(text, "MATRÍCULA")
+    )
+
+    iptu = (
+        extract_numeric_text_by_label(text, "IPTU")
+        or extract_numeric_text_by_label(text, "INSCRICAO IMOBILIARIA")
+        or extract_numeric_text_by_label(text, "INSCRIÇÃO IMOBILIÁRIA")
+        or extract_numeric_text_by_label(text, "NUMERO DO CONTRIBUINTE")
+        or extract_numeric_text_by_label(text, "NÚMERO DO CONTRIBUINTE")
+    )
+
+    data_aquisicao = (
+        extract_date_by_label(text, "DATA DE AQUISICAO")
+        or extract_date_by_label(text, "DATA DE AQUISIÇÃO")
+    )
+
+    logradouro = extract_labeled_text_from_line(text, "LOGRADOURO")
+    numero = (
+        extract_numeric_text_by_label(text, "NUMERO")
+        or extract_numeric_text_by_label(text, "NÚMERO")
+    )
+    bairro = extract_labeled_text_from_line(text, "BAIRRO")
+    municipio = (
+        extract_labeled_text_from_line(text, "MUNICIPIO")
+        or extract_labeled_text_from_line(text, "MUNICÍPIO")
+        or extract_labeled_text_from_line(text, "CIDADE")
+    )
+    uf = extract_uf_by_label(text, "UF")
+    cep = extract_cep_by_label(text, "CEP")
+
+    valor_anterior = parse_money_by_label(text, "VALOR ANTERIOR")
+    valor_atual = (
+        parse_money_by_label(text, "VALOR ATUAL")
+        or parse_money_by_label(text, "VALOR DO BEM")
+        or parse_money_by_label(text, "VALOR")
+    )
+
+    descricao_parts = []
+
+    if imovel:
+        descricao_parts.append(imovel)
+
+    if logradouro:
+        descricao_parts.append(f"localizado em {logradouro}")
+
+    if numero:
+        descricao_parts.append(f"número {numero}")
+
+    if bairro:
+        descricao_parts.append(f"bairro {bairro}")
+
+    if municipio:
+        descricao_parts.append(municipio)
+
+    if uf:
+        descricao_parts.append(uf)
+
+    descricao_value = ", ".join(descricao_parts) if descricao_parts else None
+
+    fields = {
+        "cpf_declarante": make_field(
+            cpf_declarante,
+            "medium" if cpf_declarante else "low",
+            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+        ),
+        "nome_declarante": make_field(
+            nome_declarante,
+            "medium" if nome_declarante else "low",
+            "Extraído da linha DECLARANTE, quando disponível.",
+        ),
+        "data_nascimento": make_field(
+            data_nascimento,
+            "medium" if data_nascimento else "low",
+            "Extraído da linha DATA DE NASCIMENTO, quando disponível.",
+        ),
+        "codigo_bem": make_field(
+            "11",
+            "medium",
+            "Inferido como código 11 para apartamento/imóvel residencial.",
+        ),
+        "grupo_bem": make_field(
+            "01",
+            "medium",
+            "Inferido como grupo 01 para bens imóveis.",
+        ),
+        "descricao": make_field(
+            descricao_value,
+            "medium" if descricao_value else "low",
+            "Construído a partir de IMOVEL, LOGRADOURO, NUMERO, BAIRRO, MUNICIPIO e UF.",
+        ),
+        "valor_anterior": make_field(
+            valor_anterior,
+            "medium" if valor_anterior is not None else "low",
+            "Extraído da linha VALOR ANTERIOR, quando disponível.",
+        ),
+        "valor_atual": make_field(
+            valor_atual,
+            "medium" if valor_atual is not None else "low",
+            "Extraído da linha VALOR ATUAL, VALOR DO BEM ou VALOR.",
+        ),
+        "cep": make_field(
+            cep,
+            "medium" if cep else "low",
+            "Extraído da linha CEP.",
+        ),
+        "logradouro": make_field(
+            logradouro,
+            "medium" if logradouro else "low",
+            "Extraído da linha LOGRADOURO.",
+        ),
+        "numero": make_field(
+            numero,
+            "medium" if numero else "low",
+            "Extraído da linha NUMERO/NÚMERO.",
+        ),
+        "bairro": make_field(
+            bairro,
+            "medium" if bairro else "low",
+            "Extraído da linha BAIRRO.",
+        ),
+        "municipio": make_field(
+            municipio,
+            "medium" if municipio else "low",
+            "Extraído da linha MUNICIPIO/MUNICÍPIO/CIDADE.",
+        ),
+        "uf": make_field(
+            uf,
+            "medium" if uf else "low",
+            "Extraído da linha UF.",
+        ),
+        "iptu": make_field(
+            iptu,
+            "medium" if iptu else "low",
+            "Extraído da linha IPTU, INSCRICAO IMOBILIARIA ou NUMERO DO CONTRIBUINTE.",
+        ),
+        "matricula": make_field(
+            matricula,
+            "medium" if matricula else "low",
+            "Extraído da linha MATRICULA/MATRÍCULA.",
+        ),
+        "data_aquisicao": make_field(
+            data_aquisicao,
+            "medium" if data_aquisicao else "low",
+            "Extraído da linha DATA DE AQUISICAO/DATA DE AQUISIÇÃO.",
+        ),
+    }
+
+    return {
+        "source_file": input_path,
+        "document_type": "bem_imovel",
+        "fields": fields,
+        "requires_review": build_requires_review(fields),
+    }
+
+
 def build_structured_extraction(input_path: str) -> dict:
     """
     Classifica o texto extraído e cria extração estruturada quando suportado.
@@ -667,6 +876,9 @@ def build_structured_extraction(input_path: str) -> dict:
 
     elif document_type == "bem_veiculo":
         extraction = build_bem_veiculo_extraction(str(path), text)
+
+    elif document_type == "bem_imovel":
+        extraction = build_bem_imovel_extraction(str(path), text)
 
     else:
         extraction = {

@@ -385,6 +385,14 @@ def test_extract_structured_batch_cli_outputs():
         assert plano_file.exists()
         assert veiculo_file.exists()
 
+def test_should_save_extraction_bem_imovel():
+    response = {
+        "extraction": {
+            "document_type": "bem_imovel",
+        }
+    }
+
+    assert should_save_extraction(response) is True
 
 def run_tests():
     test_collect_text_files()
@@ -396,6 +404,7 @@ def run_tests():
     test_should_not_save_unknown_extraction()
     test_build_batch_response_saves_supported_document_types()
     test_extract_structured_batch_cli_outputs()
+    test_should_save_extraction_bem_imovel()
     print("test_extract_structured_batch.py: todos os testes passaram.")
 
 
