@@ -2,250 +2,341 @@ import json
 import sys
 from pathlib import Path
 
-from normalize import normalize_name
 
-
-DOCUMENT_TYPE_LABELS = {
-    "informe_rendimentos_pj": "Informe de rendimentos de pessoa jurídica",
-    "recibo_medico": "Recibo médico",
-    "plano_saude": "Informe de plano de saúde",
-    "bem_imovel": "Bem imóvel",
-    "bem_veiculo": "Bem veículo",
-    "desconhecido": "Documento desconhecido",
+DOCUMENT_TYPES = {
+    "informe_rendimentos_pj": {
+        "label": "Informe de rendimentos PJ",
+        "keywords": [
+            "INFORME DE RENDIMENTOS",
+            "INFORME DE RENDIMENTOS PJ",
+            "RENDIMENTOS TRIBUTAVEIS",
+            "RENDIMENTOS TRIBUTÁVEIS",
+            "FONTE PAGADORA",
+            "CNPJ DA FONTE PAGADORA",
+            "CNPJ DO PAGADOR",
+            "PREVIDENCIA OFICIAL",
+            "PREVIDÊNCIA OFICIAL",
+            "IMPOSTO DE RENDA RETIDO NA FONTE",
+            "IRRF",
+            "DECIMO TERCEIRO",
+            "DÉCIMO TERCEIRO",
+            "IRRF SOBRE DECIMO TERCEIRO",
+            "IRRF SOBRE DÉCIMO TERCEIRO",
+        ],
+    },
+    "recibo_medico": {
+        "label": "Recibo médico",
+        "keywords": [
+            "RECIBO MEDICO",
+            "RECIBO MÉDICO",
+            "MEDICO",
+            "MÉDICO",
+            "CRM",
+            "PACIENTE",
+            "NOME DO PACIENTE",
+            "NOME DO MÉDICO",
+            "NOME DO MEDICO",
+            "CONSULTA",
+            "SERVICO MEDICO",
+            "SERVIÇO MÉDICO",
+            "SERVICOS MEDICOS",
+            "SERVIÇOS MÉDICOS",
+            "VALOR TOTAL",
+            "DATA DO PAGAMENTO",
+        ],
+    },
+    "plano_saude": {
+        "label": "Plano de saúde",
+        "keywords": [
+            "PLANO DE SAUDE",
+            "PLANO DE SAÚDE",
+            "OPERADORA",
+            "CNPJ DA OPERADORA",
+            "BENEFICIARIO",
+            "BENEFICIÁRIO",
+            "VALOR PAGO",
+            "VALOR NAO DEDUTIVEL",
+            "VALOR NÃO DEDUTÍVEL",
+            "COMPROVANTE DE PAGAMENTO PLANO DE SAUDE",
+            "COMPROVANTE DE PAGAMENTO PLANO DE SAÚDE",
+        ],
+    },
+    "bem_imovel": {
+        "label": "Bem imóvel",
+        "keywords": [
+            "BEM IMOVEL",
+            "BEM IMÓVEL",
+            "IMOVEL",
+            "IMÓVEL",
+            "IPTU",
+            "MATRICULA",
+            "MATRÍCULA",
+            "INSCRICAO IMOBILIARIA",
+            "INSCRIÇÃO IMOBILIÁRIA",
+            "LOGRADOURO",
+            "BAIRRO",
+            "MUNICIPIO",
+            "MUNICÍPIO",
+            "CIDADE",
+            "CEP",
+            "VALOR ANTERIOR",
+            "VALOR ATUAL",
+            "DATA DE AQUISICAO",
+            "DATA DE AQUISIÇÃO",
+        ],
+    },
+    "bem_veiculo": {
+        "label": "Bem veículo",
+        "keywords": [
+            "BEM VEICULO",
+            "BEM VEÍCULO",
+            "DOCUMENTO DE VEICULO",
+            "DOCUMENTO DE VEÍCULO",
+            "VEICULO",
+            "VEÍCULO",
+            "RENAVAM",
+            "PLACA",
+            "MARCA",
+            "MODELO",
+            "ANO FABRICACAO",
+            "ANO FABRICAÇÃO",
+            "CRLV",
+            "VALOR DO BEM",
+            "VALOR ANTERIOR",
+            "VALOR ATUAL",
+            "DATA DE AQUISICAO",
+            "DATA DE AQUISIÇÃO",
+        ],
+    },
 }
 
 
-KEYWORDS_BY_DOCUMENT_TYPE = {
-    "informe_rendimentos_pj": [
-        "INFORME DE RENDIMENTOS",
-        "RENDIMENTOS TRIBUTAVEIS",
-        "FONTE PAGADORA",
-        "IMPOSTO DE RENDA RETIDO",
-        "IRRF",
-        "DECIMO TERCEIRO",
-        "13",
-        "CNPJ DA FONTE PAGADORA",
-    ],
-    "recibo_medico": [
-        "RECIBO",
-        "CONSULTA MEDICA",
-        "MEDICO",
-        "CRM",
-        "PACIENTE",
-        "HONORARIOS MEDICOS",
-        "CPF DO PROFISSIONAL",
-    ],
-    "plano_saude": [
-        "PLANO DE SAUDE",
-        "OPERADORA",
-        "ANS",
-        "DESPESAS MEDICAS",
-        "INFORME DE PAGAMENTOS",
-        "VALOR PAGO AO PLANO",
-    ],
-    "bem_imovel": [
-        "IPTU",
-        "MATRICULA DO IMOVEL",
-        "IMOVEL",
-        "APARTAMENTO",
-        "CASA",
-        "TERRENO",
-        "ENDERECO DO IMOVEL",
-        "INSCRICAO IMOBILIARIA",
-    ],
-    "bem_veiculo": [
-        "CRLV",
-        "RENAVAM",
-        "PLACA",
-        "VEICULO",
-        "AUTOMOVEL",
-        "MARCA",
-        "MODELO",
-        "ANO FABRICACAO",
-        "CERTIFICADO DE REGISTRO",
-    ],
-}
+TRANSPORT_DOCUMENT_KEYWORDS = [
+    "CT-E",
+    "CTE",
+    "DACTE",
+    "TRANSPORTADORA",
+    "TRANSPORTE RODOVIARIO",
+    "TRANSPORTE RODOVIÁRIO",
+    "TRANSPORTE RODOVIARIO DE CARGAS",
+    "TRANSPORTE RODOVIÁRIO DE CARGAS",
+    "REMETENTE",
+    "DESTINATARIO",
+    "DESTINATÁRIO",
+    "TOMADOR DO SERVICO",
+    "TOMADOR DO SERVIÇO",
+    "CARGAS",
+    "CONHECIMENTO DE TRANSPORTE",
+    "PROTOCOLO DE AUTORIZACAO",
+    "PROTOCOLO DE AUTORIZAÇÃO",
+]
 
 
 def normalize_text(text: str) -> str:
     """
-    Normaliza texto para comparação simples por palavras-chave.
+    Normaliza texto para classificação simples por palavras-chave.
     """
-    return normalize_name(text or "")
+    return (text or "").upper()
 
 
-def score_document_type(text: str, keywords: list[str]) -> int:
+def looks_like_transport_document(text: str) -> bool:
     """
-    Conta quantas palavras-chave aparecem no texto.
-    """
-    normalized_text = normalize_text(text)
+    Detecta documentos de transporte, como DACTE/CT-e.
 
-    score = 0
+    Esses documentos não pertencem aos tipos fiscais pessoais atualmente
+    suportados pelo projeto e devem ser classificados como desconhecidos.
+    """
+    upper = normalize_text(text)
+
+    matches = sum(1 for keyword in TRANSPORT_DOCUMENT_KEYWORDS if keyword in upper)
+
+    return matches >= 3
+
+
+def empty_score_dict() -> dict:
+    """
+    Cria dicionário de scores zerados para todos os tipos conhecidos.
+    """
+    return {document_type: 0 for document_type in DOCUMENT_TYPES}
+
+
+def empty_matched_keywords_dict() -> dict:
+    """
+    Cria dicionário de keywords encontradas vazio para todos os tipos conhecidos.
+    """
+    return {document_type: [] for document_type in DOCUMENT_TYPES}
+
+
+def build_unknown_result() -> dict:
+    """
+    Resultado padrão para documento desconhecido.
+    """
+    return {
+        "document_type": "desconhecido",
+        "label": "Documento desconhecido",
+        "confidence": "low",
+        "scores": empty_score_dict(),
+        "matched_keywords": empty_matched_keywords_dict(),
+        "best_score": 0,
+        "second_score": 0,
+    }
+
+
+def score_document_type(text: str, document_type: str) -> tuple[int, list[str]]:
+    """
+    Calcula score simples por presença de palavras-chave.
+    """
+    upper = normalize_text(text)
+    keywords = DOCUMENT_TYPES[document_type]["keywords"]
+
     matched_keywords = []
 
     for keyword in keywords:
-        normalized_keyword = normalize_text(keyword)
-
-        if normalized_keyword in normalized_text:
-            score += 1
+        if keyword in upper:
             matched_keywords.append(keyword)
 
-    return score, matched_keywords
+    return len(matched_keywords), matched_keywords
+
+
+def confidence_from_scores(best_score: int, second_score: int) -> str:
+    """
+    Define confiança com base no score e na diferença para o segundo colocado.
+    """
+    if best_score <= 0:
+        return "low"
+
+    if best_score >= 4 and best_score >= second_score + 2:
+        return "high"
+
+    if best_score >= 2 and best_score > second_score:
+        return "medium"
+
+    return "low"
 
 
 def classify_document_text(text: str) -> dict:
     """
-    Classifica um texto bruto em um document_type conhecido.
+    Classifica texto em um dos tipos suportados pelo projeto.
 
-    Retorna:
-    - document_type
-    - label
-    - confidence
-    - scores
-    - matched_keywords
+    Retorna documento desconhecido quando:
+    - o texto está vazio;
+    - parece ser documento de transporte;
+    - nenhum tipo suportado tem score suficiente.
     """
+    if not text or not text.strip():
+        return build_unknown_result()
+
+    if looks_like_transport_document(text):
+        return build_unknown_result()
+
     scores = {}
-    matched_keywords_by_type = {}
+    matched_keywords = {}
 
-    for document_type, keywords in KEYWORDS_BY_DOCUMENT_TYPE.items():
-        score, matched_keywords = score_document_type(text, keywords)
+    for document_type in DOCUMENT_TYPES:
+        score, matches = score_document_type(text, document_type)
         scores[document_type] = score
-        matched_keywords_by_type[document_type] = matched_keywords
+        matched_keywords[document_type] = matches
 
-    best_type = max(scores, key=scores.get)
-    best_score = scores[best_type]
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
 
-    sorted_scores = sorted(
-        scores.items(),
-        key=lambda item: item[1],
-        reverse=True
-    )
+    best_type, best_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0
 
-    second_score = sorted_scores[1][1] if len(sorted_scores) > 1 else 0
+    confidence = confidence_from_scores(best_score, second_score)
 
-    if best_score == 0:
+    if confidence == "low":
         return {
             "document_type": "desconhecido",
-            "label": DOCUMENT_TYPE_LABELS["desconhecido"],
+            "label": "Documento desconhecido",
             "confidence": "low",
             "scores": scores,
-            "matched_keywords": matched_keywords_by_type,
+            "matched_keywords": matched_keywords,
             "best_score": best_score,
-            "second_score": second_score
+            "second_score": second_score,
         }
-
-    if best_score >= 3 and best_score >= second_score + 2:
-        confidence = "high"
-    elif best_score >= 2:
-        confidence = "medium"
-    else:
-        confidence = "low"
 
     return {
         "document_type": best_type,
-        "label": DOCUMENT_TYPE_LABELS[best_type],
+        "label": DOCUMENT_TYPES[best_type]["label"],
         "confidence": confidence,
         "scores": scores,
-        "matched_keywords": matched_keywords_by_type,
+        "matched_keywords": matched_keywords,
         "best_score": best_score,
-        "second_score": second_score
+        "second_score": second_score,
     }
 
 
-def classify_document_file(path: str) -> dict:
+def classify_document_file(input_path: str) -> dict:
     """
-    Classifica um arquivo de texto.
+    Classifica arquivo de texto.
     """
-    file_path = Path(path)
+    path = Path(input_path)
 
-    if not file_path.exists():
+    if not path.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {path}")
 
-    text = file_path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
 
     return classify_document_text(text)
 
 
-def print_classification_result(result: dict) -> None:
+def print_human_result(result: dict, input_path: str | None = None) -> None:
     """
-    Imprime o resultado da classificação em formato humano.
+    Imprime resultado em formato humano.
     """
-    print("Classificação do documento:")
-    print(f"- document_type: {result['document_type']}")
-    print(f"- label: {result['label']}")
-    print(f"- confidence: {result['confidence']}")
+    if input_path:
+        print(f"Arquivo: {input_path}")
 
+    print(f"document_type: {result['document_type']}")
+    print(f"label: {result['label']}")
+    print(f"confidence: {result['confidence']}")
+    print(f"best_score: {result['best_score']}")
+    print(f"second_score: {result['second_score']}")
     print("")
-    print("Pontuação:")
+    print("Scores:")
 
-    for document_type, score in sorted(
-        result["scores"].items(),
-        key=lambda item: item[1],
-        reverse=True
-    ):
+    for document_type, score in result["scores"].items():
         print(f"- {document_type}: {score}")
 
     print("")
     print("Palavras-chave encontradas:")
 
-    for document_type, keywords in sorted(
-        result["matched_keywords"].items(),
-        key=lambda item: result["scores"][item[0]],
-        reverse=True
-    ):
-        if not keywords:
-            continue
+    for document_type, keywords in result["matched_keywords"].items():
+        if keywords:
+            joined = ", ".join(keywords)
+        else:
+            joined = "-"
 
-        print(f"- {document_type}: {', '.join(keywords)}")
-
-
-def print_json_result(result: dict) -> None:
-    """
-    Imprime o resultado da classificação em JSON.
-    """
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+        print(f"- {document_type}: {joined}")
 
 
 def parse_args(argv: list[str]) -> tuple[str, bool]:
     """
-    Interpreta argumentos de linha de comando.
-
     Uso:
         python3 tools/classify_document.py arquivo.txt
         python3 tools/classify_document.py arquivo.txt --json
     """
-    if len(argv) not in {2, 3}:
+    if len(argv) < 2:
         print("Uso:")
-        print("python3 tools/classify_document.py caminho/do/texto.txt")
-        print("python3 tools/classify_document.py caminho/do/texto.txt --json")
+        print("python3 tools/classify_document.py arquivo.txt")
+        print("python3 tools/classify_document.py arquivo.txt --json")
         sys.exit(1)
 
     input_path = argv[1]
-    output_json = False
+    print_json = "--json" in argv[2:]
 
-    if len(argv) == 3:
-        if argv[2] != "--json":
-            print("Argumento inválido.")
-            print("Use --json para saída estruturada.")
-            sys.exit(1)
-
-        output_json = True
-
-    return input_path, output_json
+    return input_path, print_json
 
 
 def main() -> None:
-    input_path, output_json = parse_args(sys.argv)
+    input_path, should_print_json = parse_args(sys.argv)
 
     result = classify_document_file(input_path)
 
-    if output_json:
-        print_json_result(result)
+    if should_print_json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        print_classification_result(result)
-
-    if result["document_type"] == "desconhecido":
-        sys.exit(1)
+        print_human_result(result, input_path)
 
 
 if __name__ == "__main__":
