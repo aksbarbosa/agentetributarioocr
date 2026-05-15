@@ -1,0 +1,15 @@
+#!/bin/sh
+
+echo "Rodando checagem de segurança antes do commit..."
+
+python3 tools/check_repo_safety.py
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Commit bloqueado: há arquivos sensíveis rastreados pelo Git."
+  echo "Corrija com git rm --cached antes de commitar."
+  exit 1
+fi
+
+echo "Checagem de segurança OK."
+exit 0
