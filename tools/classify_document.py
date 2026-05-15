@@ -50,6 +50,8 @@ DOCUMENT_TYPES = {
         "keywords": [
             "PLANO DE SAUDE",
             "PLANO DE SAÚDE",
+            "PLANOS DE SAUDE",
+            "PLANOS DE SAÚDE",
             "OPERADORA",
             "CNPJ DA OPERADORA",
             "BENEFICIARIO",
@@ -59,6 +61,13 @@ DOCUMENT_TYPES = {
             "VALOR NÃO DEDUTÍVEL",
             "COMPROVANTE DE PAGAMENTO PLANO DE SAUDE",
             "COMPROVANTE DE PAGAMENTO PLANO DE SAÚDE",
+            "UNIMED",
+            "COPARTICIPACAO",
+            "COPARTICIPAÇÃO",
+            "VALOR TOTAL DA NOTA FISCAL",
+            "VALOR LÍQUIDO DA NOTA FISCAL",
+            "PRESTADOR DE SERVIÇOS",
+            "TOMADOR DE SERVIÇOS",
         ],
     },
     "bem_imovel": {
@@ -167,18 +176,29 @@ def empty_matched_keywords_dict() -> dict:
     return {document_type: [] for document_type in DOCUMENT_TYPES}
 
 
-def build_unknown_result() -> dict:
+def build_unknown_result(scores: dict | None = None, matched_keywords: dict | None = None) -> dict:
     """
     Resultado padrão para documento desconhecido.
     """
+    if scores is None:
+        scores = empty_score_dict()
+
+    if matched_keywords is None:
+        matched_keywords = empty_matched_keywords_dict()
+
+    best_score = max(scores.values()) if scores else 0
+
+    ranked_scores = sorted(scores.values(), reverse=True)
+    second_score = ranked_scores[1] if len(ranked_scores) > 1 else 0
+
     return {
         "document_type": "desconhecido",
         "label": "Documento desconhecido",
         "confidence": "low",
-        "scores": empty_score_dict(),
-        "matched_keywords": empty_matched_keywords_dict(),
-        "best_score": 0,
-        "second_score": 0,
+        "scores": scores,
+        "matched_keywords": matched_keywords,
+        "best_score": best_score,
+        "second_score": second_score,
     }
 
 
@@ -245,15 +265,7 @@ def classify_document_text(text: str) -> dict:
     confidence = confidence_from_scores(best_score, second_score)
 
     if confidence == "low":
-        return {
-            "document_type": "desconhecido",
-            "label": "Documento desconhecido",
-            "confidence": "low",
-            "scores": scores,
-            "matched_keywords": matched_keywords,
-            "best_score": best_score,
-            "second_score": second_score,
-        }
+        return build_unknown_result(scores, matched_keywords)
 
     return {
         "document_type": best_type,
