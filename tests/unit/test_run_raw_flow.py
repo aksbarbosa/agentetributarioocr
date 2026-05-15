@@ -27,6 +27,8 @@ def test_run_raw_flow_cli():
     assert "OK: Validar extrações estruturadas geradas" in result.stdout
     assert "Promover extrações estruturadas válidas para pasta segura" in result.stdout
     assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
+    assert "Gerar revisão assistida das extrações promovidas" in result.stdout
+    assert "Fluxo real a partir de inputs/raw finalizado." in result.stdout
 
     assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.json").exists()
     assert (PROJECT_ROOT / "outputs/raw-inputs-manifest.report.md").exists()
@@ -37,6 +39,8 @@ def test_run_raw_flow_cli():
     assert (PROJECT_ROOT / "outputs/promote-structured-extractions.json").exists()
     assert (PROJECT_ROOT / "outputs/promote-structured-extractions.report.md").exists()
     assert (PROJECT_ROOT / "outputs/promoted_extractions").exists()
+    assert (PROJECT_ROOT / "outputs/review-promoted-extractions.json").exists()
+    assert (PROJECT_ROOT / "outputs/review-promoted-extractions.report.md").exists()
 
 def run_tests():
     test_run_raw_flow_cli()

@@ -97,6 +97,8 @@ def print_final_summary() -> None:
     print("- outputs/promoted_extractions/")
     print("- outputs/promote-structured-extractions.json")
     print("- outputs/promote-structured-extractions.report.md")
+    print("- outputs/review-promoted-extractions.json")
+    print("- outputs/review-promoted-extractions.report.md")
 
 
 def main() -> None:
@@ -139,6 +141,17 @@ def main() -> None:
             "outputs/promoted_extractions",
             "outputs/promote-structured-extractions.json",
             "outputs/promote-structured-extractions.report.md",
+        ],
+    )
+
+    run_step(
+        "Gerar revisão assistida das extrações promovidas",
+        [
+            sys.executable,
+            "tools/review_promoted_extractions.py",
+            "outputs/promoted_extractions",
+            "outputs/review-promoted-extractions.json",
+            "outputs/review-promoted-extractions.report.md",
         ],
     )
 
