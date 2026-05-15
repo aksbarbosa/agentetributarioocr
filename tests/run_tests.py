@@ -32,6 +32,7 @@ TEST_FILES = [
     "tests/unit/test_extract_structured_batch.py",
     "tests/unit/test_promote_structured_extractions.py",
     "tests/unit/test_export_dec_experimental.py",
+    "tests/unit/test_project_status.py",
 ]
 
 
