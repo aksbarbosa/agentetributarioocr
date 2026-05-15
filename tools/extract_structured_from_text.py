@@ -155,6 +155,66 @@ def extract_first_cnpj_from_text(text: str) -> str | None:
     return only_digits(match.group(0))
 
 
+
+
+def extract_first_cpf_from_text(text: str) -> str | None:
+    """
+    Extrai o primeiro CPF encontrado no texto.
+    """
+    match = re.search(
+        r"\b\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2}\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    return only_digits(match.group(0))
+
+
+def extract_informe_pagador(text: str) -> tuple[str | None, str | None]:
+    """
+    Extrai CNPJ e nome da fonte pagadora em informe de rendimentos.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    for index, line in enumerate(lines):
+        cnpj_match = re.search(
+            r"(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})\s+(.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+
+        if cnpj_match:
+            cnpj = only_digits(cnpj_match.group(1))
+            nome = cnpj_match.group(2).strip().upper()
+            return cnpj, nome
+
+    return None, None
+
+
+def extract_informe_beneficiario(text: str) -> tuple[str | None, str | None]:
+    """
+    Extrai CPF e nome do beneficiário em informe de rendimentos.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    for line in lines:
+        cpf_match = re.search(
+            r"(\d{3}\.?\d{3}[,.]?\s*\d{3}-?\d{2})\s+(.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+
+        if cpf_match:
+            cpf = only_digits(cpf_match.group(1))
+            nome = cpf_match.group(2).strip().upper()
+            return cpf, nome
+
+    return None, None
+
+
 def extract_date_by_label(text: str, label: str) -> str | None:
     """
     Extrai data associada a um rótulo específico.
@@ -550,38 +610,76 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para informe de rendimentos PJ.
     """
-    cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
-    nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
+    cnpj_pagador_extraido, nome_pagador_extraido = extract_informe_pagador(text)
+    cpf_beneficiario_extraido, nome_beneficiario_extraido = extract_informe_beneficiario(text)
+
+    cpf_declarante = (
+        extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
+        or cpf_beneficiario_extraido
+        or extract_first_cpf_from_text(text)
+    )
+
+    nome_declarante = (
+        extract_labeled_text_from_line(text, "DECLARANTE")
+        or nome_beneficiario_extraido
+    )
+
     data_nascimento = extract_date_by_label(text, "DATA DE NASCIMENTO")
 
     nome_pagador = (
         extract_labeled_text_from_line(text, "FONTE PAGADORA")
         or extract_labeled_text_from_line(text, "PAGADOR")
         or extract_labeled_text_from_line(text, "EMPRESA")
+        or nome_pagador_extraido
     )
 
     cnpj_pagador = (
         extract_cnpj_by_label(text, "CNPJ DA FONTE PAGADORA")
         or extract_cnpj_by_label(text, "CNPJ DO PAGADOR")
         or extract_cnpj_by_label(text, "CNPJ")
+        or cnpj_pagador_extraido
+        or extract_first_cnpj_from_text(text)
     )
 
-    rendimento_total = parse_money_by_label(text, "RENDIMENTOS TRIBUTAVEIS")
-    previdencia_oficial = parse_money_by_label(text, "PREVIDENCIA OFICIAL")
-    irrf = parse_money_by_label(text, "IMPOSTO DE RENDA RETIDO NA FONTE")
-    decimo_terceiro = parse_money_by_label(text, "DECIMO TERCEIRO SALARIO")
-    irrf_13 = parse_money_by_label(text, "IRRF SOBRE DECIMO TERCEIRO")
+    rendimento_total = (
+        parse_money_by_label(text, "RENDIMENTOS TRIBUTAVEIS")
+        or parse_money_by_label(text, "RENDIMENTOS TRIBUTÁVEIS")
+        or parse_money_by_label(text, "TOTAL DOS RENDIMENTOS")
+    )
+
+    previdencia_oficial = (
+        parse_money_by_label(text, "PREVIDENCIA OFICIAL")
+        or parse_money_by_label(text, "PREVIDÊNCIA OFICIAL")
+    )
+
+    irrf = (
+        parse_money_by_label(text, "IMPOSTO DE RENDA RETIDO NA FONTE")
+        or parse_money_by_label(text, "IMPOSTO SOBRE A RENDA RETIDO NA FONTE")
+        or parse_money_by_label(text, "IRRF")
+    )
+
+    decimo_terceiro = (
+        parse_money_by_label(text, "DECIMO TERCEIRO SALARIO")
+        or parse_money_by_label(text, "DÉCIMO TERCEIRO SALÁRIO")
+        or parse_money_by_label(text, "13")
+    )
+
+    irrf_13 = (
+        parse_money_by_label(text, "IRRF SOBRE DECIMO TERCEIRO")
+        or parse_money_by_label(text, "IRRF SOBRE DÉCIMO TERCEIRO")
+        or parse_money_by_label(text, "IRRF SOBRE 13")
+    )
 
     fields = {
         "cpf_declarante": make_field(
             cpf_declarante,
             "medium" if cpf_declarante else "low",
-            "Extraído da linha CPF DO DECLARANTE, quando disponível.",
+            "Extraído da área de beneficiário ou linha CPF DO DECLARANTE.",
         ),
         "nome_declarante": make_field(
             nome_declarante,
             "medium" if nome_declarante else "low",
-            "Extraído da linha DECLARANTE, quando disponível.",
+            "Extraído da área de beneficiário ou linha DECLARANTE.",
         ),
         "data_nascimento": make_field(
             data_nascimento,
@@ -591,17 +689,17 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
         "nome_pagador": make_field(
             nome_pagador,
             "medium" if nome_pagador else "low",
-            "Extraído da linha FONTE PAGADORA, PAGADOR ou EMPRESA.",
+            "Extraído da área Fonte Pagadora, FONTE PAGADORA, PAGADOR ou EMPRESA.",
         ),
         "cnpj_pagador": make_field(
             cnpj_pagador,
             "medium" if cnpj_pagador else "low",
-            "Extraído da linha CNPJ DA FONTE PAGADORA, quando disponível.",
+            "Extraído da área Fonte Pagadora ou linha CNPJ.",
         ),
         "rendimento_total": make_field(
             rendimento_total,
             "medium" if rendimento_total is not None else "low",
-            "Extraído da linha RENDIMENTOS TRIBUTAVEIS.",
+            "Extraído da linha RENDIMENTOS TRIBUTAVEIS/TOTAL DOS RENDIMENTOS.",
         ),
         "previdencia_oficial": make_field(
             previdencia_oficial,
@@ -616,7 +714,7 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
         "irrf": make_field(
             irrf,
             "medium" if irrf is not None else "low",
-            "Extraído da linha IMPOSTO DE RENDA RETIDO NA FONTE.",
+            "Extraído da linha IMPOSTO DE RENDA RETIDO NA FONTE ou IRRF.",
         ),
         "irrf_13": make_field(
             irrf_13,
