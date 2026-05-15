@@ -35,6 +35,7 @@ TEST_FILES = [
     "tests/unit/test_project_status.py",
     "tests/unit/test_prepare_raw_for_ocr.py",
     "tests/unit/test_compare_ocr_outputs.py",
+    "tests/unit/test_validate_ocr_config.py",
 ]
 
 
