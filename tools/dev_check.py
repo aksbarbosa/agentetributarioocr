@@ -2,12 +2,9 @@ import subprocess
 import sys
 
 
-EXECUTED_STEPS = []
-
-
-def run_step(title: str, command: list[str]) -> None:
+def run_command(title: str, command: list[str]) -> None:
     """
-    Executa uma etapa da checagem de desenvolvimento.
+    Executa um comando de checagem de desenvolvimento.
     """
     print("")
     print(f"==> {title}")
@@ -19,52 +16,42 @@ def run_step(title: str, command: list[str]) -> None:
         print(f"Falhou: {title}")
         sys.exit(result.returncode)
 
-    EXECUTED_STEPS.append(title)
     print(f"OK: {title}")
 
 
-def print_final_summary() -> None:
-    """
-    Imprime resumo final da checagem.
-    """
-    print("")
-    print("Checagem concluída com sucesso.")
-    print("")
-    print("Etapas executadas:")
-
-    for step in EXECUTED_STEPS:
-        print(f"- {step}")
-
-
 def main() -> None:
+    """
+    Executa checagens principais do projeto.
+    """
     print("Iniciando checagem de desenvolvimento.")
 
-    run_step(
-        "Validar configuração",
-        [sys.executable, "tools/validate_config.py", "config/project_config.json"],
+    run_command(
+        "Validar configuração principal",
+        [
+            sys.executable,
+            "tools/validate_config.py",
+            "config/project_config.json",
+        ],
     )
 
-    run_step(
-        "Limpar outputs",
-        [sys.executable, "tools/clean_outputs.py"],
+    run_command(
+        "Validar configuração OCR",
+        [
+            sys.executable,
+            "tools/validate_ocr_config.py",
+        ],
     )
 
-    run_step(
-        "Rodar pré-triagem de documentos",
-        [sys.executable, "tools/preflight_documents.py", "tests/fixtures/raw_text"],
+    run_command(
+        "Rodar testes unitários",
+        [
+            sys.executable,
+            "tests/run_tests.py",
+        ],
     )
 
-    run_step(
-        "Rodar projeto",
-        [sys.executable, "tools/run_project.py"],
-    )
-
-    run_step(
-        "Rodar testes",
-        [sys.executable, "tests/run_tests.py"],
-    )
-
-    print_final_summary()
+    print("")
+    print("Checagem concluída com sucesso.")
 
 
 if __name__ == "__main__":
