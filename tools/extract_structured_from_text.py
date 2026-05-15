@@ -37,8 +37,9 @@ def parse_money_by_label(text: str, label: str) -> int | None:
     """
     Extrai valor monetário associado a um rótulo específico.
 
-    Exemplo:
+    Exemplos:
     VALOR PAGO: R$ 2400,00 -> 240000
+    VALOR TOTAL DA NOTA FISCAL: R$ 908,00 -> 90800
     """
     pattern = rf"{label}\s*[:\-]?\s*(?:R\$\s*)?(\d{{1,3}}(?:\.\d{{3}})*|\d+),(\d{{2}})"
     match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -136,6 +137,22 @@ def extract_cnpj_by_label(text: str, label: str) -> str | None:
         return None
 
     return only_digits(match.group(1))
+
+
+def extract_first_cnpj_from_text(text: str) -> str | None:
+    """
+    Extrai o primeiro CNPJ encontrado no texto.
+    """
+    match = re.search(
+        r"\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    return only_digits(match.group(0))
 
 
 def extract_date_by_label(text: str, label: str) -> str | None:
@@ -374,6 +391,31 @@ def extract_renavam(text: str) -> str | None:
     return only_digits(match.group(1))
 
 
+def extract_unimed_operator_name(text: str) -> str | None:
+    """
+    Extrai nome da operadora em notas fiscais de plano de saúde,
+    especialmente quando aparece como Nome/Razão Social.
+    """
+    lines = [line.strip() for line in text.splitlines()]
+
+    for line in lines:
+        match = re.search(
+            r"Nome/Razão Social\s*:\s*(.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            value = match.group(1).strip()
+            if value:
+                return value.upper()
+
+    for line in lines:
+        if "UNIMED" in line.upper():
+            return line.strip().upper()
+
+    return None
+
+
 def make_field(value, confidence: str, source_hint: str) -> dict:
     """
     Cria campo no formato esperado pelo validador.
@@ -594,6 +636,9 @@ def build_informe_rendimentos_pj_extraction(input_path: str, text: str) -> dict:
 def build_plano_saude_extraction(input_path: str, text: str) -> dict:
     """
     Cria extração estruturada simples para plano de saúde.
+
+    Também cobre notas fiscais de coparticipação de operadora,
+    como documentos da Unimed.
     """
     cpf_declarante = extract_labeled_cpf_from_text(text, "CPF DO DECLARANTE")
     nome_declarante = extract_labeled_text_from_line(text, "DECLARANTE")
@@ -603,17 +648,23 @@ def build_plano_saude_extraction(input_path: str, text: str) -> dict:
         extract_labeled_text_from_line(text, "OPERADORA")
         or extract_labeled_text_from_line(text, "PLANO DE SAUDE")
         or extract_labeled_text_from_line(text, "PLANO DE SAÚDE")
+        or extract_unimed_operator_name(text)
     )
 
     cnpj_operadora = (
         extract_cnpj_by_label(text, "CNPJ DA OPERADORA")
         or extract_cnpj_by_label(text, "CNPJ DO PLANO")
+        or extract_cnpj_by_label(text, "CNPJ/CPF")
         or extract_cnpj_by_label(text, "CNPJ")
+        or extract_first_cnpj_from_text(text)
     )
 
     valor_pago = (
         parse_money_by_label(text, "VALOR PAGO")
         or parse_money_by_label(text, "TOTAL PAGO")
+        or parse_money_by_label(text, "VALOR TOTAL DA NOTA FISCAL")
+        or parse_money_by_label(text, "VALOR LÍQUIDO DA NOTA FISCAL")
+        or parse_money_by_label(text, "VALOR LIQUIDO DA NOTA FISCAL")
         or parse_money_by_label(text, "VALOR TOTAL")
     )
 
@@ -626,6 +677,15 @@ def build_plano_saude_extraction(input_path: str, text: str) -> dict:
 
     if valor_nao_dedutivel is None:
         valor_nao_dedutivel = 0
+
+    upper = text.upper()
+
+    if "COPARTICIPACAO" in upper or "COPARTICIPAÇÃO" in upper:
+        descricao_value = "COPARTICIPACAO"
+    elif "PLANOS DE SAUDE" in upper or "PLANOS DE SAÚDE" in upper:
+        descricao_value = "PLANO DE SAUDE"
+    else:
+        descricao_value = "PLANO DE SAUDE"
 
     fields = {
         "cpf_declarante": make_field(
@@ -646,17 +706,17 @@ def build_plano_saude_extraction(input_path: str, text: str) -> dict:
         "nome_operadora": make_field(
             nome_operadora,
             "medium" if nome_operadora else "low",
-            "Extraído da linha OPERADORA, PLANO DE SAUDE ou PLANO DE SAÚDE.",
+            "Extraído da linha OPERADORA, PLANO DE SAUDE ou Nome/Razão Social.",
         ),
         "cnpj_operadora": make_field(
             cnpj_operadora,
             "medium" if cnpj_operadora else "low",
-            "Extraído da linha CNPJ DA OPERADORA, quando disponível.",
+            "Extraído da linha CNPJ DA OPERADORA, CNPJ DO PLANO ou CNPJ/CPF.",
         ),
         "valor_pago": make_field(
             valor_pago,
             "medium" if valor_pago is not None else "low",
-            "Extraído da linha VALOR PAGO, TOTAL PAGO ou VALOR TOTAL.",
+            "Extraído da linha VALOR PAGO, VALOR TOTAL DA NOTA FISCAL ou VALOR LÍQUIDO DA NOTA FISCAL.",
         ),
         "valor_nao_dedutivel": make_field(
             valor_nao_dedutivel,
@@ -664,9 +724,9 @@ def build_plano_saude_extraction(input_path: str, text: str) -> dict:
             "Extraído da linha VALOR NAO DEDUTIVEL ou assumido como 0 quando ausente.",
         ),
         "descricao": make_field(
-            "PLANO DE SAUDE",
+            descricao_value,
             "medium",
-            "Inferido a partir do tipo do documento plano_saude.",
+            "Inferido a partir de COPARTICIPACAO, PLANOS DE SAUDE ou tipo do documento.",
         ),
     }
 
