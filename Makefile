@@ -1,4 +1,4 @@
-.PHONY: help setup status project-status run continue check test safety clean validate-config validate-ocr-config raw best prepared
+.PHONY: help setup status project-status run review continue check test safety clean validate-config validate-ocr-config raw best prepared
 
 PYTHON := python3
 
@@ -15,6 +15,7 @@ help:
 	@echo "  make status             Mostra estratégia OCR configurada"
 	@echo "  make project-status     Mostra status dos outputs e próximo passo provável"
 	@echo "  make run                Executa fluxo configurado em config/ocr_config.json"
+	@echo "  make review             Abre revisão interativa do pacote manual"
 	@echo "  make continue           Continua após revisão manual conforme estratégia OCR"
 	@echo ""
 	@echo "Fluxos específicos:"
@@ -40,6 +41,9 @@ project-status:
 
 run:
 	$(PYTHON) tools/irpf_ocr.py run
+
+review:
+	$(PYTHON) tools/irpf_ocr.py review
 
 continue:
 	$(PYTHON) tools/irpf_ocr.py continue
